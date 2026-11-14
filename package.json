@@ -1,0 +1,80 @@
+{
+  "name": "plannner",
+  "version": "1.7.0",
+  "description": "PLNR — день, календарь и дела",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "author": "borgni",
+  "devDependencies": {
+    "@fontsource/audiowide": "^5.3.0",
+    "@fontsource/exo-2": "^5.3.0",
+    "@fontsource/kanit": "^5.3.0",
+    "@fontsource/manrope": "^5.3.0",
+    "@fontsource/michroma": "^5.3.0",
+    "@fontsource/racing-sans-one": "^5.3.0",
+    "@fontsource/saira": "^5.3.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "electron": "^45.3.0",
+    "electron-builder": "^26.18.0",
+    "lucide-static": "^1.72.0",
+    "png-to-ico": "^3.0.2",
+    "resedit": "^2.0.3"
+  },
+  "productName": "PLNR",
+  "build": {
+    "appId": "com.borgni.plannner",
+    "productName": "PLNR",
+    "copyright": "© 2026 borgni",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "build/icon.png",
+      "!**/*.map"
+    ],
+    "afterPack": "./scripts/after-pack.js",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "executableName": "PLNR",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "PLNR",
+      "uninstallDisplayName": "PLNR",
+      "artifactName": "Plannner-Setup-${version}.${ext}",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerLanguages": [
+        "ru_RU"
+      ],
+      "language": "1049",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "electronVersion": "45.3.0",
+    "electronLanguages": [
+      "ru",
+      "en-US"
+    ]
+  }
+}

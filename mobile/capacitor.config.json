@@ -1,0 +1,12 @@
+{
+  "appId": "com.borgni.plnr",
+  "appName": "PLNR",
+  "webDir": "www",
+  "backgroundColor": "#061235",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#061235",
+    "scrollEnabled": false,
+    "limitsNavigationsToAppBoundDomains": false
+  }
+}

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#061235" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'" />
+  <title>PLNR</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Живой синий фон, на котором видно «стекло» -->
+  <div class="bg" aria-hidden="true">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+    <div class="blob b4"></div>
+  </div>
+
+  <header class="titlebar">
+    <div class="tb-brand">
+      <img src="logo.svg" alt="" class="tb-logo" />
+      <span class="brand-word">PLNR</span>
+    </div>
+    <div class="tb-clock" id="tbClock"></div>
+  </header>
+
+  <main id="screens">
+    <section class="screen" id="screen-day" data-screen="day"></section>
+    <section class="screen" id="screen-calendar" data-screen="calendar"></section>
+    <section class="screen" id="screen-tasks" data-screen="tasks"></section>
+    <section class="screen" id="screen-projects" data-screen="projects"></section>
+    <section class="screen" id="screen-settings" data-screen="settings"></section>
+  </main>
+
+  <nav class="dock glass" id="dock" aria-label="Переключение экранов"></nav>
+
+  <div id="layer"></div>
+  <div id="toasts"></div>
+
+  <script src="config.js"></script>
+  <script src="icons.js"></script>
+  <script src="util.js"></script>
+  <script src="themes.js"></script>
+  <script src="store.js"></script>
+  <script src="ui.js"></script>
+  <script src="sync.js"></script>
+  <script src="form.js"></script>
+  <script src="screen-day.js"></script>
+  <script src="screen-calendar.js"></script>
+  <script src="screen-tasks.js"></script>
+  <script src="screen-projects.js"></script>
+  <script src="screen-settings.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

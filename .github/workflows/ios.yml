@@ -1,0 +1,62 @@
+# Сборка PLNR для iPhone на облачном Mac GitHub.
+# Результат — файл PLNR.ipa (без подписи). Его ставят на iPhone через Sideloadly со своим Apple ID.
+name: iPhone (PLNR.ipa)
+
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'mobile/**', '.github/workflows/ios.yml']
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Установить Capacitor
+        working-directory: mobile
+        run: npm install --no-audit --no-fund
+
+      - name: Подготовить проект Xcode
+        run: bash mobile/ios-setup.sh
+
+      - name: Собрать приложение
+        working-directory: mobile/ios/App
+        run: |
+          if [ -d App.xcworkspace ]; then TARGET="-workspace App.xcworkspace"; else TARGET="-project App.xcodeproj"; fi
+          xcodebuild $TARGET -scheme App -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION=1.7.0 CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            build | tail -40
+          test -d build/Build/Products/Release-iphoneos/App.app
+
+      - name: Упаковать PLNR.ipa
+        working-directory: mobile/ios/App
+        run: |
+          rm -rf Payload && mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry ../../../PLNR.ipa Payload
+          ls -la ../../../PLNR.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PLNR-ipa
+          path: PLNR.ipa
+
+      - name: Выложить в Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="ios-${{ github.run_number }}"
+          gh release create "$TAG" PLNR.ipa --title "PLNR для iPhone · сборка ${{ github.run_number }}" \
+            --notes "Скачайте PLNR.ipa и установите через Sideloadly (Apple ID → Start)."

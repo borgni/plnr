@@ -1,0 +1,13 @@
+node_modules/
+dist/
+mobile/node_modules/
+mobile/www/
+mobile/ios/
+test/shots*/
+test/v*/
+test/mob/
+test/narrow/
+test/final/
+test/dbg/
+test/names/
+*.png.tmp
