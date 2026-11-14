@@ -58,6 +58,16 @@ bf.settings = { 'ATTRIBUTES' => ['RemoveHeadersOnCopy'] }
 
 project.save
 
+# плагин виджета — в список, который Capacitor загружает при старте
+require 'json'
+cfg = File.join(app_dir, 'App/capacitor.config.json')
+if File.exist?(cfg)
+  j = JSON.parse(File.read(cfg))
+  j['packageClassList'] = ((j['packageClassList'] || []) + ['PlnrWidgetPlugin']).uniq
+  File.write(cfg, JSON.pretty_generate(j))
+  puts 'plugin list: ' + j['packageClassList'].join(', ')
+end
+
 # своё окно приложения, которое подключает мост к виджету
 sb = File.join(app_dir, 'App/Base.lproj/Main.storyboard')
 txt = File.read(sb)

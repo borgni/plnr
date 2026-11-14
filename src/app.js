@@ -207,7 +207,11 @@ window.P = window.P || {};
       const json = JSON.stringify({ theme: { bg0: th.bg0, bg1: th.bg1, acc: th.acc, soft: th.soft }, days });
       if (json === last && P.widgetState.status === 'ok') return;
       last = json;
-      W.save({ json }).then((r) => {
+      // напрямую через мост Capacitor (не зависит от того, успел ли плагин объявиться в интерфейсе)
+      const call = window.Capacitor.nativePromise
+        ? window.Capacitor.nativePromise('PlnrWidget', 'save', { json })
+        : W.save({ json });
+      call.then((r) => {
         const st = r && r.ok ? 'ok' : 'nogroup';
         const changed = st !== P.widgetState.status;
         P.widgetState = { status: st, ...(r || {}) };

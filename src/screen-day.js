@@ -242,12 +242,12 @@ window.P = window.P || {};
   function render(anim = false) {
     // запоминаем, где были карточки, чтобы плавно переставить их (выполненные уезжают вправо/вниз)
     const mobile = P.isMobile();
-    const before = anim ? null : snapshot();
+    const before = anim || mobile ? null : snapshot();
     // прокрутку списка и полосы тем сохраняем — иначе после любого нажатия всё прыгает в начало
     const oldBoard = root.querySelector('.board');
     const keepTop = !anim || anim === 'filter' ? (oldBoard ? oldBoard.scrollTop : 0) : 0;
     const keepLeft = root.querySelector('.cat-filter')?.scrollLeft || 0;
-    const cls = anim === true ? 'enter ' + (S.dir > 0 ? 'from-right' : S.dir < 0 ? 'from-left' : '') : '';
+    const cls = anim === true && !mobile ? 'enter ' + (S.dir > 0 ? 'from-right' : S.dir < 0 ? 'from-left' : '') : '';
     root.innerHTML = `${headHTML()}<div class="board ${cls}"></div>`;
     S.dir = 0;
     renderBoard();
@@ -255,6 +255,8 @@ window.P = window.P || {};
     if (keepTop) board.scrollTop = keepTop;
     const cf = root.querySelector('.cat-filter');
     if (cf && keepLeft) cf.scrollLeft = keepLeft;
+    // на телефоне карточки появляются сразу и не двигаются — никаких подёргиваний
+    if (mobile) return;
     if (before) flip(before, mobile);
     else if (anim === 'filter') appear(mobile);
   }
