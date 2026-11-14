@@ -90,10 +90,17 @@ P.isNative = () => !!(window.Capacitor && window.Capacitor.isNativePlatform && w
 P.isMobile = () => document.body.classList.contains('mobile');
 
 // свайп влево/вправо по элементу (для смены дня и месяца на телефоне)
+// палец на полосе, которая сама листается вбок (темы и т.п.), — это не смена дня/месяца
+const inHScroll = (node, stop) => {
+  for (let n = node; n && n !== stop; n = n.parentElement) {
+    if (n.scrollWidth > n.clientWidth + 2 && /auto|scroll/.test(getComputedStyle(n).overflowX)) return true;
+  }
+  return false;
+};
 P.onSwipe = (el, fn) => {
   let x0 = 0, y0 = 0, t0 = 0, tracking = false;
   el.addEventListener('touchstart', (e) => {
-    if (e.touches.length !== 1 || e.target.closest('input, textarea, .tp-col, .modal, .cat-filter, .list-filter')) { tracking = false; return; }
+    if (e.touches.length !== 1 || e.target.closest('input, textarea, .tp-col, .modal, .cat-filter, .list-filter') || inHScroll(e.target, el)) { tracking = false; return; }
     tracking = true; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
   }, { passive: true });
   el.addEventListener('touchend', (e) => {

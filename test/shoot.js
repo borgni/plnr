@@ -106,6 +106,19 @@ app.whenReady().then(async () => {
       await run(`document.querySelector('.modal [name=end]').focus()`); await sleep(500); await run(`document.querySelector('.tp [data-add="90"]').click()`); await shot('41-wheel-end', 800);
       console.log('WHEEL2', await win.webContents.executeJavaScript(`document.querySelector('.modal [name=start]').value+' '+document.querySelector('.modal [name=end]').value+' '+!!document.querySelector('.tp')`)); }
     if (s === 'force') { await run(`document.body.classList.add('mobile'); P.refreshDock(); P.show('day')`); await sleep(400); }
+    if (s === 'swipe') {
+      const res = await win.webContents.executeJavaScript(`(async()=>{
+        P.openDay(P.todayKey()); await new Promise(r=>setTimeout(r,600));
+        const sw=(target,x0,x1)=>{ const mk=(x)=>new Touch({identifier:1,target,clientX:x,clientY:200});
+          target.dispatchEvent(new TouchEvent('touchstart',{touches:[mk(x0)],changedTouches:[mk(x0)],bubbles:true}));
+          target.dispatchEvent(new TouchEvent('touchend',{touches:[],changedTouches:[mk(x1)],bubbles:true})); };
+        const d0=P.dayState.date;
+        sw(document.querySelector('#screen-day .cat-chip'),300,100); await new Promise(r=>setTimeout(r,300));
+        const onChips=P.dayState.date;
+        sw(document.querySelector('#screen-day .tcard, #screen-day .add-card'),300,100); await new Promise(r=>setTimeout(r,300));
+        return JSON.stringify({chipsKeepDay: onChips===d0, cardsChangeDay: P.dayState.date!==d0});
+      })()`); console.log('SWIPE', res);
+    }
     if (s === 'mcal') {
       await run(`P.openCalendarAt(P.addDays(P.todayKey(),1))`); await shot('m1-cal', 900);
       await run(`document.querySelector('.cell[data-k="'+P.addDays(P.todayKey(),1)+'"] .cchip').click()`); await sleep(300);
