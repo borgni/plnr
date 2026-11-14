@@ -152,10 +152,21 @@ app.whenReady().then(async () => {
   check('телефон получил тему «Дедлайны» и дело в ней', (await J('phone', `P.store.cats().some(c=>c.id==='dl') && P.store.get('L30').category`)) === 'dl');
   await J('laptop', `P.store.remove('L30'); 0`); await syncNow('laptop'); await syncNow('phone');
   await J('laptop', `P.store.setSetting('theme','amethyst'); 0`); await syncNow('laptop'); await syncNow('phone');
+  // 8в. вход на ноутбуке «протух» (облако не знает ключ) — просим войти заново, дела не теряются
+  await J('laptop', `(()=>{ const s=JSON.parse(localStorage.getItem('plnr-auth')); s.expires_at=0; s.refresh_token='rDEAD'; localStorage.setItem('plnr-auth', JSON.stringify(s)); P.sync.start(); return 0; })()`);
+  await J('laptop', `P.store.add({id:'L40', title:'Офлайн-дело', category:'study', date:'${today}'}); 0`);
+  await sleep(500); await J('laptop', `P.sync.now()`); await sleep(300);
+  const stR = await J('laptop', `JSON.stringify({s:P.sync.state().status, err:P.sync.state().lastError, sess:!!P.sync.state().session, email:P.sync.lastEmail(), has:!!P.store.get('L40')})`);
+  const o = JSON.parse(stR);
+  check('протухший вход → просьба войти, без английской ошибки', o.s === 'off' && !o.sess && /войдите|введите пароль/i.test(o.err));
+  check('почта запомнена, дела на месте', !!o.email && o.has);
+  await J('laptop', `P.sync.signIn('me@test.ru', 'secret12').then(()=>1)`);
+  await syncNow('laptop'); await syncNow('phone');
+  check('после повторного входа офлайн-дело дошло до телефона', (await J('phone', `!!P.store.get('L40')`)) === true);
   // 9. данные на диске
   await J('laptop', `P.store.flush()`); await J('phone', `P.store.flush()`); await sleep(300);
   const disk = ['laptop', 'phone'].map((n) => JSON.parse(fs.readFileSync(path.join(dirs[n], 'plannner-data.json'), 'utf8')).tasks.length);
-  check('на диске обоих устройств одинаковое число дел', disk[0] === disk[1] && disk[0] === 6, JSON.stringify(disk));
+  check('на диске обоих устройств одинаковое число дел', disk[0] === disk[1] && disk[0] === 7, JSON.stringify(disk));
   // 10. автоматическая синхронизация после правки (без ручного вызова)
   await J('phone', `P.store.add({id:'P20', title:'Авто', category:'study', date:'${today}'}); 0`);
   await sleep(3500);
@@ -163,7 +174,7 @@ app.whenReady().then(async () => {
   check('изменение уходит само через пару секунд', (await titles('laptop')).includes('Авто'));
   // 11. выход
   await J('phone', `P.sync.signOut()`); await sleep(300);
-  check('выход: дела остались на телефоне', (await titles('phone')).length === 7, JSON.stringify(await titles('phone')));
+  check('выход: дела остались на телефоне', (await titles('phone')).length === 8, JSON.stringify(await titles('phone')));
 
   console.log(`\nСИНХРОНИЗАЦИЯ: ${ok} из ${ok + fail} проверок прошли`);
   app.exit(fail ? 1 : 0);

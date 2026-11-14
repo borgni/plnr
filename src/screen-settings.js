@@ -19,7 +19,7 @@ window.P = window.P || {};
         <h3>${P.icon('rotate-ccw')}Синхронизация <span class="h3-note">ноутбук ↔ телефон</span></h3>
         <p class="sync-lead">Войдите одним и тем же аккаунтом на компьютере и на iPhone — дела будут одинаковыми на обоих. Ваши текущие дела при входе не пропадут, а добавятся в облако.</p>
         <form class="sync-form" autocomplete="on">
-          <input name="email" type="email" placeholder="Почта" autocomplete="username" required />
+          <input name="email" type="email" placeholder="Почта" autocomplete="username" required value="${P.esc(P.sync.lastEmail ? P.sync.lastEmail() : '')}" />
           <input name="password" type="password" placeholder="Пароль (от 6 символов)" autocomplete="current-password" required minlength="6" />
           <div class="sync-btns">
             <button type="submit" class="btn primary" data-sync="in">Войти</button>

@@ -21,7 +21,13 @@ window.P = window.P || {};
     again: false,
   };
   const listeners = new Set();
-  const setStatus = (st, err = '') => { S.status = st; S.lastError = err; listeners.forEach((f) => { try { f(); } catch {} }); };
+  const setStatus = (st, err = '') => {
+    S.status = st; S.lastError = err;
+    // красная точка на «Настройках», пока нужно войти заново
+    const b = document.querySelector('.dock [data-dock=settings]');
+    if (b) b.classList.toggle('warn', st === 'off' && !!err);
+    listeners.forEach((f) => { try { f(); } catch {} });
+  };
 
   P.sync = {
     configured: () => !!(URL_ && KEY),
@@ -112,12 +118,37 @@ window.P = window.P || {};
     user: { id: j.user.id, email: j.user.email },
   });
 
+  // Обновление входа: одно на всё приложение (иначе два одновременных запроса тратят один и тот же
+  // одноразовый ключ, и облако отзывает вход). Если ключ облаку уже неизвестен — просим войти заново.
+  let refreshing = null;
   async function ensureToken() {
     if (!S.session) throw new Error('not signed in');
     if (S.session.expires_at - 60000 > Date.now()) return;
-    const j = await http('/auth/v1/token?grant_type=refresh_token', { method: 'POST', auth: false, body: { refresh_token: S.session.refresh_token } });
-    S.session = fromAuth(j); saveSession();
+    if (!refreshing) {
+      const token = S.session.refresh_token;
+      refreshing = (async () => {
+        try {
+          const j = await http('/auth/v1/token?grant_type=refresh_token', { method: 'POST', auth: false, body: { refresh_token: token } });
+          if (S.session && S.session.refresh_token === token) { S.session = fromAuth(j); saveSession(); }
+        } catch (e) {
+          if (e.status === 400 || e.status === 401 || e.status === 403) { const err = new Error('relogin'); err.relogin = true; throw err; }
+          throw e;
+        } finally { refreshing = null; }
+      })();
+    }
+    return refreshing;
   }
+
+  // вход больше не действует: забываем его, но оставляем почту, чтобы войти одним паролем
+  function needRelogin() {
+    const email = S.session && S.session.user && S.session.user.email;
+    if (email) try { localStorage.setItem('plnr-last-email', email); } catch {}
+    S.session = null; saveSession();
+    setStatus('off', 'Вход устарел — введите пароль ещё раз. Дела на этом устройстве сохранены и объединятся с облаком после входа.');
+    if (P.toast) P.toast('Синхронизация: войдите заново в «Настройках»');
+    if (P.refreshDock) P.refreshDock();
+  }
+  P.sync.lastEmail = () => { try { return localStorage.getItem('plnr-last-email') || ''; } catch { return ''; } };
 
   const ruError = (e) => {
     const m = String(e.message || e);
@@ -141,6 +172,7 @@ window.P = window.P || {};
       const err = new Error('confirm-email'); err.confirm = true; throw err;
     }
     S.session = fromAuth(j); saveSession();
+    try { localStorage.setItem('plnr-last-email', S.session.user.email || email); } catch {}
     setStatus('idle');
     await P.sync.now();
   };
@@ -198,9 +230,11 @@ window.P = window.P || {};
         S.lastSync = Date.now();
         setStatus('ok');
       } catch (e) {
+        if (e.relogin) { needRelogin(); return; }
         if (e.status === 401 || e.status === 403) {
-          // вход устарел — пробуем обновить, иначе просим войти заново
-          try { S.session.expires_at = 0; await ensureToken(); S.running = null; return P.sync.now(); } catch { S.session = null; saveSession(); setStatus('off', 'Войдите снова'); return; }
+          // ключ доступа отклонён — пробуем обновить вход, иначе просим войти заново
+          try { S.session.expires_at = 0; await ensureToken(); S.running = null; return P.sync.now(); }
+          catch (e2) { if (e2.relogin || e2.status === 401 || e2.status === 403) needRelogin(); else setStatus(e2.offline ? 'offline' : 'error', ruError(e2)); return; }
         }
         setStatus(e.offline ? 'offline' : 'error', ruError(e));
       } finally { S.running = null; }

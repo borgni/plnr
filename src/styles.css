@@ -1340,3 +1340,4 @@ body.mobile .pcard { background: linear-gradient(170deg, color-mix(in srgb, var(
   body.mobile #screen-calendar .cal-head .cat-filter.inline { flex: 1; margin: 0; width: auto; }
 }
 body.mobile .mhero-big.long { font-size: 38px; padding: 6px 0 4px; }
+.dock-btn.warn::after { content: ''; position: absolute; top: 9px; right: 11px; width: 9px; height: 9px; border-radius: 50%; background: #ff5b6b; box-shadow: 0 0 0 2px rgba(10, 16, 40, .8); }
