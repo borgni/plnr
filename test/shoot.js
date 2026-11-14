@@ -106,6 +106,21 @@ app.whenReady().then(async () => {
       await run(`document.querySelector('.modal [name=end]').focus()`); await sleep(500); await run(`document.querySelector('.tp [data-add="90"]').click()`); await shot('41-wheel-end', 800);
       console.log('WHEEL2', await win.webContents.executeJavaScript(`document.querySelector('.modal [name=start]').value+' '+document.querySelector('.modal [name=end]').value+' '+!!document.querySelector('.tp')`)); }
     if (s === 'force') { await run(`document.body.classList.add('mobile'); P.refreshDock(); P.show('day')`); await sleep(400); }
+    if (s === 'jank') {
+      const r = await win.webContents.executeJavaScript(`(async()=>{
+        const sl=(ms)=>new Promise(r=>setTimeout(r,ms));
+        P.openDay(P.addDays(P.todayKey(),1)); await sl(700);
+        const b=()=>document.querySelector('#screen-day .board');
+        b().scrollTop=200; await sl(100);
+        const t0=b().scrollTop;
+        document.querySelectorAll('#screen-day .tcard .check')[1].click(); await sl(150);
+        const t1=b().scrollTop;
+        document.querySelector('#screen-day .cat-filter').scrollLeft=80;
+        document.querySelectorAll('#screen-day .cat-chip')[1].click(); await sl(100);
+        const left=document.querySelector('#screen-day .cat-filter').scrollLeft;
+        return JSON.stringify({scrollBefore:t0, afterToggle:t1, chipsLeftAfterFilter:left});
+      })()`); console.log('JANK', r); await shot('m5-jank', 300);
+    }
     if (s === 'swipe') {
       const res = await win.webContents.executeJavaScript(`(async()=>{
         P.openDay(P.todayKey()); await new Promise(r=>setTimeout(r,600));

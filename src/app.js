@@ -192,9 +192,10 @@ window.P = window.P || {};
   if (P.sync) P.sync.start();
 
   // Виджет iPhone: план на ближайшие дни кладём в общую с виджетом папку
+  if (P.isNative()) P.widgetState = { status: 'unknown' };
+  if (P.isNative() && !window.Capacitor.registerPlugin) P.widgetState = { status: 'noplugin' };
   if (P.isNative() && window.Capacitor.registerPlugin) {
     const W = window.Capacitor.registerPlugin('PlnrWidget');
-    P.widgetState = { status: 'unknown' };
     let last = '';
     const push = () => {
       const th = P.THEMES[P.store.settings.theme] || P.THEMES.ocean;
@@ -208,8 +209,10 @@ window.P = window.P || {};
       last = json;
       W.save({ json }).then((r) => {
         const st = r && r.ok ? 'ok' : 'nogroup';
-        if (st !== P.widgetState.status) { P.widgetState = { status: st, groups: r && r.groups }; P.screens.settings.refreshWidget && P.screens.settings.refreshWidget(); }
-      }).catch(() => { P.widgetState = { status: 'noplugin' }; });
+        const changed = st !== P.widgetState.status;
+        P.widgetState = { status: st, ...(r || {}) };
+        if (changed) P.screens.settings.refreshWidget();
+      }).catch((e) => { P.widgetState = { status: 'noplugin', err: String(e && e.message || e) }; P.screens.settings.refreshWidget(); });
     };
     P.store.subscribe(P.debounce(push, 700));
     document.addEventListener('visibilitychange', () => { if (!document.hidden) push(); });

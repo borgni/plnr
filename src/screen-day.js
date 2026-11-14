@@ -241,27 +241,53 @@ window.P = window.P || {};
   /* ---------- Отрисовка экрана ---------- */
   function render(anim = false) {
     // запоминаем, где были карточки, чтобы плавно переставить их (выполненные уезжают вправо/вниз)
+    const mobile = P.isMobile();
     const before = anim ? null : snapshot();
-    const cls = anim ? 'enter ' + (S.dir > 0 ? 'from-right' : S.dir < 0 ? 'from-left' : '') : '';
+    // прокрутку списка и полосы тем сохраняем — иначе после любого нажатия всё прыгает в начало
+    const oldBoard = root.querySelector('.board');
+    const keepTop = !anim || anim === 'filter' ? (oldBoard ? oldBoard.scrollTop : 0) : 0;
+    const keepLeft = root.querySelector('.cat-filter')?.scrollLeft || 0;
+    const cls = anim === true ? 'enter ' + (S.dir > 0 ? 'from-right' : S.dir < 0 ? 'from-left' : '') : '';
     root.innerHTML = `${headHTML()}<div class="board ${cls}"></div>`;
     S.dir = 0;
     renderBoard();
-    if (before) flip(before);
+    const board = root.querySelector('.board');
+    if (keepTop) board.scrollTop = keepTop;
+    const cf = root.querySelector('.cat-filter');
+    if (cf && keepLeft) cf.scrollLeft = keepLeft;
+    if (before) flip(before, mobile);
+    else if (anim === 'filter') appear(mobile);
   }
 
   function snapshot() {
     const m = new Map();
-    root.querySelectorAll('.board [data-id].tcard, .board .scard').forEach((el) => m.set(el.dataset.id, el.getBoundingClientRect()));
+    root.querySelectorAll('.board [data-id].tcard, .board .scard, .board .add-card').forEach((el) => m.set(el.dataset.id || 'add', el.getBoundingClientRect()));
     return m;
   }
-  function flip(before) {
-    root.querySelectorAll('.board [data-id].tcard, .board .scard').forEach((el) => {
-      const a = before.get(el.dataset.id);
-      if (!a) { el.animate([{ opacity: 0, transform: 'scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 350, easing: 'ease-out' }); return; }
+  // на телефоне — только сдвиг и лёгкое масштабирование, без прозрачности (стекло не мерцает)
+  function flip(before, mobile) {
+    const dur = mobile ? 420 : 600;
+    root.querySelectorAll('.board [data-id].tcard, .board .scard, .board .add-card').forEach((el) => {
+      const a = before.get(el.dataset.id || 'add');
+      if (!a) {
+        el.animate(mobile
+          ? [{ transform: 'scale(.97) translateY(6px)' }, { transform: 'none' }]
+          : [{ opacity: 0, transform: 'scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.2, .85, .25, 1)' });
+        return;
+      }
       const b = el.getBoundingClientRect();
       const dx = a.left - b.left, dy = a.top - b.top;
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
-      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 600, easing: 'cubic-bezier(.2, .85, .25, 1)' });
+      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: dur, easing: 'cubic-bezier(.2, .85, .25, 1)' });
+    });
+  }
+  // после смены фильтра карточки мягко «встают на место»
+  function appear(mobile) {
+    root.querySelectorAll('.board [data-id].tcard, .board .add-card').forEach((el, i) => {
+      el.animate(mobile
+        ? [{ transform: 'translateY(8px) scale(.985)' }, { transform: 'none' }]
+        : [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 300, delay: Math.min(i, 6) * 25, easing: 'cubic-bezier(.2, .85, .25, 1)', fill: 'backwards' });
     });
   }
 
@@ -283,7 +309,7 @@ window.P = window.P || {};
     if (filter) {
       const id = filter.dataset.filter;
       S.hidden.has(id) ? S.hidden.delete(id) : S.hidden.add(id);
-      render(true);
+      render('filter');
       return;
     }
     const actEl = e.target.closest('[data-act]');
@@ -322,7 +348,17 @@ window.P = window.P || {};
         const c = e.target.closest('.scard');
         if (c) P.openTaskModal({ task: P.store.get(c.dataset.id) });
       });
-      ro = new ResizeObserver(P.debounce(() => { if (root.classList.contains('active')) renderBoard(); }, 60));
+      let roW = 0;
+      ro = new ResizeObserver(P.debounce(() => {
+        if (!root.classList.contains('active')) return;
+        const w = root.clientWidth;
+        // на телефоне список не зависит от высоты: клавиатура и панели не должны его перерисовывать
+        if (P.isMobile() && w === roW) return;
+        roW = w;
+        const b = root.querySelector('.board'), top = b ? b.scrollTop : 0;
+        renderBoard();
+        const nb = root.querySelector('.board'); if (nb && top) nb.scrollTop = top;
+      }, 60));
       ro.observe(root);
     },
     render,

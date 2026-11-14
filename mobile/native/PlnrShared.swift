@@ -61,8 +61,45 @@ enum PlnrShared {
         } catch { return false }
     }
 
+    // Запасной путь без общей папки: связка ключей с общим префиксом команды
+    // (бесплатный профиль Apple обычно разрешает любые группы вида TEAMID.*)
+    static func keychainGroups() -> [String] {
+        guard let team = teamID() else { return [] }
+        return [team + ".com.borgni.plnr.shared", team + "." + appBundleID()]
+    }
+
+    static func writeKeychain(_ json: String) -> [String] {
+        let data = json.data(using: .utf8)!
+        var ok: [String] = []
+        for g in keychainGroups() {
+            let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                    kSecAttrService as String: "plnr.widget",
+                                    kSecAttrAccount as String: "plan",
+                                    kSecAttrAccessGroup as String: g]
+            SecItemDelete(q as CFDictionary)
+            var add = q
+            add[kSecValueData as String] = data
+            add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            if SecItemAdd(add as CFDictionary, nil) == errSecSuccess { ok.append(g) }
+        }
+        return ok
+    }
+
+    static func readKeychain() -> Data? {
+        for g in keychainGroups() {
+            let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                    kSecAttrService as String: "plnr.widget",
+                                    kSecAttrAccount as String: "plan",
+                                    kSecAttrAccessGroup as String: g,
+                                    kSecReturnData as String: true]
+            var out: AnyObject?
+            if SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let d = out as? Data { return d }
+        }
+        return nil
+    }
+
     static func read() -> Data? {
-        guard let dir = containerURL() else { return nil }
-        return try? Data(contentsOf: dir.appendingPathComponent(fileName))
+        if let dir = containerURL(), let d = try? Data(contentsOf: dir.appendingPathComponent(fileName)) { return d }
+        return readKeychain()
     }
 }

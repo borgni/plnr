@@ -47,15 +47,17 @@ window.P = window.P || {};
 
   function widgetHTML() {
     if (!P.widgetState) return '';
-    const st = P.widgetState.status;
+    const w = P.widgetState, st = w.status;
     const text = st === 'ok'
-      ? 'Работает. Добавьте: долгое нажатие на пустом месте экрана «Домой» → «+» (или «Изменить» → «Добавить виджет») → найдите PLNR.'
+      ? 'Работает. Добавьте: долгое нажатие на пустом месте экрана «Домой» → «+» (или «Изменить» → «Добавить виджет») → найдите PLNR. Если виджет уже стоит пустым — удалите его и добавьте заново.'
       : st === 'nogroup'
-        ? 'Недоступен в этой установке: при подписи не выдана общая папка для виджета (App Group). Приложение работает как обычно.'
-        : 'Проверяю…';
+        ? 'Не удалось передать дела виджету: при подписи не выданы ни общая папка, ни общая связка ключей. Приложение работает как обычно.'
+        : st === 'noplugin' ? 'Мост к виджету не найден в этой сборке.' : 'Проверяю…';
+    const diag = st === 'unknown' ? '' : `<div class="widget-diag">папка: ${w.file ? 'да' : 'нет'} · ключи: ${w.keychain ? 'да' : 'нет'} · команда: ${P.esc(w.team || '—')}${w.err ? ' · ' + P.esc(w.err) : ''}</div>`;
     return `<section class="set-card glass widget-card">
       <h3>${P.icon('sun')}Виджет на экран «Домой»</h3>
-      <p class="sync-lead"><span class="sync-status ${st === 'ok' ? 'ok' : st === 'nogroup' ? 'error' : 'syncing'}"><i></i></span>${text}</p>
+      <p class="sync-lead"><span class="sync-status ${st === 'ok' ? 'ok' : st === 'unknown' ? 'syncing' : 'error'}"><i></i></span>${text}</p>
+      ${diag}
     </section>`;
   }
 

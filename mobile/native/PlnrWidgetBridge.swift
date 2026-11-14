@@ -13,9 +13,12 @@ public class PlnrWidgetPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func save(_ call: CAPPluginCall) {
         let json = call.getString("json") ?? "{}"
-        let ok = PlnrShared.write(json)
+        let file = PlnrShared.write(json)
+        let kc = PlnrShared.writeKeychain(json)
+        let ok = file || !kc.isEmpty
         if ok { WidgetCenter.shared.reloadAllTimelines() }
-        call.resolve(["ok": ok, "groups": PlnrShared.groupCandidates().joined(separator: ", ")])
+        call.resolve(["ok": ok, "file": file, "keychain": kc.joined(separator: ", "),
+                      "team": PlnrShared.teamID() ?? "—", "bundle": PlnrShared.appBundleID()])
     }
 }
 
