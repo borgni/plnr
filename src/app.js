@@ -193,9 +193,16 @@ window.P = window.P || {};
 
   // Виджет iPhone: план на ближайшие дни кладём в общую с виджетом папку
   if (P.isNative()) P.widgetState = { status: 'unknown' };
-  if (P.isNative() && !window.Capacitor.registerPlugin) P.widgetState = { status: 'noplugin' };
-  if (P.isNative() && window.Capacitor.registerPlugin) {
-    const W = window.Capacitor.registerPlugin('PlnrWidget');
+  if (P.isNative()) {
+    // вызов плагина виджета: любым из путей, которые есть в мосте Capacitor
+    const saveWidget = (json) => {
+      const C = window.Capacitor;
+      const pl = C.Plugins && C.Plugins.PlnrWidget;
+      if (pl && typeof pl.save === 'function') return pl.save({ json });
+      if (typeof C.nativePromise === 'function') return C.nativePromise('PlnrWidget', 'save', { json });
+      if (typeof C.registerPlugin === 'function') return C.registerPlugin('PlnrWidget').save({ json });
+      return Promise.reject(new Error('в мосте Capacitor нет способа вызвать плагин'));
+    };
     let last = '';
     const push = () => {
       const th = P.THEMES[P.store.settings.theme] || P.THEMES.ocean;
@@ -207,10 +214,8 @@ window.P = window.P || {};
       const json = JSON.stringify({ theme: { bg0: th.bg0, bg1: th.bg1, acc: th.acc, soft: th.soft }, days });
       if (json === last && P.widgetState.status === 'ok') return;
       last = json;
-      // напрямую через мост Capacitor (не зависит от того, успел ли плагин объявиться в интерфейсе)
-      const call = window.Capacitor.nativePromise
-        ? window.Capacitor.nativePromise('PlnrWidget', 'save', { json })
-        : W.save({ json });
+      let call;
+      try { call = Promise.resolve(saveWidget(json)); } catch (e) { call = Promise.reject(e); }
       call.then((r) => {
         const st = r && r.ok ? 'ok' : 'nogroup';
         const changed = st !== P.widgetState.status;
