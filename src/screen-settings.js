@@ -45,6 +45,20 @@ window.P = window.P || {};
     </section>`;
   }
 
+  function widgetHTML() {
+    if (!P.widgetState) return '';
+    const st = P.widgetState.status;
+    const text = st === 'ok'
+      ? 'Работает. Добавьте: долгое нажатие на пустом месте экрана «Домой» → «+» (или «Изменить» → «Добавить виджет») → найдите PLNR.'
+      : st === 'nogroup'
+        ? 'Недоступен в этой установке: при подписи не выдана общая папка для виджета (App Group). Приложение работает как обычно.'
+        : 'Проверяю…';
+    return `<section class="set-card glass widget-card">
+      <h3>${P.icon('sun')}Виджет на экран «Домой»</h3>
+      <p class="sync-lead"><span class="sync-status ${st === 'ok' ? 'ok' : st === 'nogroup' ? 'error' : 'syncing'}"><i></i></span>${text}</p>
+    </section>`;
+  }
+
   function catsHTML() {
     const list = P.store.cats();
     const active = list.filter((c) => !c.deleted);
@@ -168,6 +182,7 @@ window.P = window.P || {};
         </section>
 
         ${syncHTML()}
+        ${widgetHTML()}
 
         <section class="set-card glass proj-set">
           <h3>${P.icon('target')}Проекты</h3>
@@ -266,6 +281,13 @@ window.P = window.P || {};
 
   P.screens = P.screens || {};
   P.screens.settings = {
+    refreshWidget() {
+      const card = root && root.querySelector('.widget-card');
+      if (!card) return;
+      const tpl = document.createElement('template');
+      tpl.innerHTML = widgetHTML().trim();
+      card.replaceWith(tpl.content);
+    },
     async mount(el) {
       root = el;
       root.addEventListener('click', onClick);

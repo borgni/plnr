@@ -190,6 +190,31 @@ window.P = window.P || {};
 
   P.applySettings();
   if (P.sync) P.sync.start();
+
+  // Виджет iPhone: план на ближайшие дни кладём в общую с виджетом папку
+  if (P.isNative() && window.Capacitor.registerPlugin) {
+    const W = window.Capacitor.registerPlugin('PlnrWidget');
+    P.widgetState = { status: 'unknown' };
+    let last = '';
+    const push = () => {
+      const th = P.THEMES[P.store.settings.theme] || P.THEMES.ocean;
+      const days = {};
+      for (let i = -1; i <= 7; i++) {
+        const k = P.addDays(P.todayKey(), i);
+        days[k] = P.store.on(k).sort(P.byTime).map((t) => ({ t: t.title, time: P.timeRange(t), c: P.catOf(t.category).color, d: !!t.done }));
+      }
+      const json = JSON.stringify({ theme: { bg0: th.bg0, bg1: th.bg1, acc: th.acc, soft: th.soft }, days });
+      if (json === last && P.widgetState.status === 'ok') return;
+      last = json;
+      W.save({ json }).then((r) => {
+        const st = r && r.ok ? 'ok' : 'nogroup';
+        if (st !== P.widgetState.status) { P.widgetState = { status: st, groups: r && r.groups }; P.screens.settings.refreshWidget && P.screens.settings.refreshWidget(); }
+      }).catch(() => { P.widgetState = { status: 'noplugin' }; });
+    };
+    P.store.subscribe(P.debounce(push, 700));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) push(); });
+    push();
+  }
   updateBadges();
   P.show('day');
   requestAnimationFrame(() => document.body.classList.add('ready'));

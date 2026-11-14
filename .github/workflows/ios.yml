@@ -27,7 +27,9 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Подготовить проект Xcode
-        run: bash mobile/ios-setup.sh
+        run: |
+          ruby -e "require 'xcodeproj'" 2>/dev/null || sudo gem install xcodeproj --no-document
+          bash mobile/ios-setup.sh
 
       - name: Собрать приложение
         working-directory: mobile/ios/App
@@ -45,6 +47,12 @@ jobs:
         run: |
           rm -rf Payload && mkdir Payload
           cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          ls Payload/App.app/PlugIns || true
+          # пробная подпись с правами (общая папка для виджета) — Sideloadly прочитает их и переподпишет своим Apple ID
+          for f in Payload/App.app/Frameworks/*; do [ -e "$f" ] && codesign -f -s - "$f"; done
+          [ -d Payload/App.app/PlugIns/PLNRWidget.appex ] && codesign -f -s - --entitlements ../../native/PLNRWidget/PLNRWidget.entitlements Payload/App.app/PlugIns/PLNRWidget.appex
+          codesign -f -s - --entitlements ../../native/App.entitlements Payload/App.app
+          codesign -d --entitlements - Payload/App.app 2>&1 | tail -5
           zip -qry ../../../PLNR.ipa Payload
           ls -la ../../../PLNR.ipa
 

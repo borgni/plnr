@@ -27,4 +27,6 @@ pb "Add :UISupportedInterfaceOrientations array"
 pb "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait"
 pb "Add :UISupportedInterfaceOrientations:1 string UIInterfaceOrientationLandscapeLeft"
 pb "Add :UISupportedInterfaceOrientations:2 string UIInterfaceOrientationLandscapeRight"
+# виджет на экран «Домой»
+ruby add-widget.rb
 echo "iOS project ready"
