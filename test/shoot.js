@@ -106,6 +106,21 @@ app.whenReady().then(async () => {
       await run(`document.querySelector('.modal [name=end]').focus()`); await sleep(500); await run(`document.querySelector('.tp [data-add="90"]').click()`); await shot('41-wheel-end', 800);
       console.log('WHEEL2', await win.webContents.executeJavaScript(`document.querySelector('.modal [name=start]').value+' '+document.querySelector('.modal [name=end]').value+' '+!!document.querySelector('.tp')`)); }
     if (s === 'force') { await run(`document.body.classList.add('mobile'); P.refreshDock(); P.show('day')`); await sleep(400); }
+    if (s === 'mproj') { await run(`P.store.setSetting('projectsEnabled', true); P.refreshDock(); P.store.addProject({name:'IOT', color:'#34d399', deadline:P.addDays(P.todayKey(),11), base:40}); P.store.addProject({name:'Сайт СтройПласт', color:'#a78bfa'}); P.show('projects')`); await shot('m6-proj', 900); }
+    if (s === 'mlp') {
+      const press = async (sel, name) => {
+        await run(`(()=>{ const el=document.querySelector('${sel}'); const r=el.getBoundingClientRect(); const o={pointerType:'touch',bubbles:true,clientX:r.left+r.width/2,clientY:r.top+r.height/2,pointerId:5}; el.dispatchEvent(new PointerEvent('pointerdown',o)); setTimeout(()=>el.dispatchEvent(new PointerEvent('pointerup',o)),600); })()`);
+        await shot(name, 1100);
+        console.log('LP', name, await win.webContents.executeJavaScript(`[...document.querySelectorAll('.ctx-item .ctx-label')].map(x=>x.textContent).join(' | ') || (P.isModalOpen()?'modal':'none')`));
+        await run(`P.closePopover(); document.querySelector('.modal [data-close]')?.click()`); await sleep(400);
+      };
+      await run(`P.openDay(P.todayKey())`); await sleep(600);
+      await press('#screen-day .tcard', 'm7-lp-task');
+      await press('#dock [data-dock=add]', 'm8-lp-dock');
+      await press('#dock [data-dock=day]', 'm8b-lp-dockday');
+      await run(`P.show('calendar')`); await sleep(600);
+      await press('#screen-calendar .cell:not(.out)', 'm9-lp-cal');
+    }
     if (s === 'jank') {
       const r = await win.webContents.executeJavaScript(`(async()=>{
         const sl=(ms)=>new Promise(r=>setTimeout(r,ms));

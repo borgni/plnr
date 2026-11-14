@@ -346,6 +346,8 @@ window.P = window.P || {};
       P.onSwipe(el, (d) => { if (P.isMobile() && !P.isModalOpen()) go(P.addDays(S.date, d), d); });
       root = el;
       root.addEventListener('click', onClick);
+      // долгое нажатие на дело — меню с действиями
+      P.onLongPress(root, '.tcard[data-id], .scard[data-id], .detail[data-id]', (el) => P.taskMenu(el, el.dataset.id));
       root.addEventListener('dblclick', (e) => {
         const c = e.target.closest('.scard');
         if (c) P.openTaskModal({ task: P.store.get(c.dataset.id) });

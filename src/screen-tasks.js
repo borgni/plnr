@@ -196,7 +196,10 @@ window.P = window.P || {};
 
   P.screens = P.screens || {};
   P.screens.tasks = {
-    mount(el) { root = el; root.addEventListener('click', onClick, false); },
+    mount(el) {
+      root = el; root.addEventListener('click', onClick, false);
+      P.onLongPress(root, '.lrow[data-id]', (row) => P.taskMenu(row, row.dataset.id));
+    },
     render,
     onStoreChange() { if (root.querySelector('.tasks-layout')) renderList(); else render(); },
     onKey() { return false; },

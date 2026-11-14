@@ -300,6 +300,9 @@ window.P = window.P || {};
       P.onSwipe(el, (d) => { if (P.isMobile() && !P.isModalOpen()) shiftMonth(d); });
       root = el;
       root.addEventListener('click', onClick);
+      // долгое нажатие на день — новое дело на этот день; на деле справа — меню
+      P.onLongPress(root, '.cell[data-k]', (cell) => { select(cell.dataset.k); P.openTaskModal({ date: cell.dataset.k }); });
+      P.onLongPress(root, '.side-item[data-id]', (el) => P.taskMenu(el, el.dataset.id));
       root.addEventListener('dblclick', (e) => {
         if (P.isMobile()) return;
         const cell = e.target.closest('.cell');

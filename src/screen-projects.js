@@ -9,9 +9,9 @@ window.P = window.P || {};
     if (!p.deadline) return { text: 'Без дедлайна', tone: '' };
     const left = P.diffDays(P.todayKey(), p.deadline);
     const when = `до ${P.fmtLongYear(p.deadline)}`;
-    if (left < 0) return { text: `${when} · просрочено на ${-left} ${P.plural(-left, 'день', 'дня', 'дней')}`, tone: 'over' };
-    if (left === 0) return { text: `${when} · сегодня`, tone: 'soon' };
-    return { text: `${when} · осталось ${left} ${P.plural(left, 'день', 'дня', 'дней')}`, tone: left <= 7 ? 'soon' : '' };
+    if (left < 0) return { text: when, left: `просрочено на ${-left} ${P.plural(-left, 'день', 'дня', 'дней')}`, tone: 'over' };
+    if (left === 0) return { text: when, left: 'сегодня', tone: 'soon' };
+    return { text: when, left: `ещё ${left} ${P.plural(left, 'день', 'дня', 'дней')}`, tone: left <= 7 ? 'soon' : '' };
   }
 
   function cardHTML(p, i) {
@@ -28,7 +28,7 @@ window.P = window.P || {};
         <span class="pcard-ico">${P.icon(complete ? 'check' : 'target')}</span>
         <div class="pcard-title">
           <h3>${P.esc(p.name)}</h3>
-          <span class="pcard-dl ${dl.tone}">${P.icon('flag')}${dl.text}</span>
+          <span class="pcard-dl ${dl.tone}">${P.icon('flag')}<span class="dl-when">${dl.text}</span>${dl.left ? `<span class="dl-left">${dl.left}</span>` : ''}</span>
         </div>
         <button class="icon-btn sm" data-pact="edit" title="Изменить проект">${P.icon('pencil')}</button>
         <button class="icon-btn sm danger" data-pact="delete" title="Удалить проект">${P.icon('trash-2')}</button>

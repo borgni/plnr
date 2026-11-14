@@ -131,6 +131,51 @@ window.P = window.P || {};
     P.show(b.dataset.dock);
   });
 
+  // Долгое нажатие на кнопки нижней панели — быстрые команды
+  const scrollToCard = (sel) => setTimeout(() => document.querySelector('#screen-settings ' + sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  const dockCommands = (id) => {
+    const today = P.todayKey();
+    const day = (n) => P.addDays(today, n);
+    switch (id) {
+      case 'day': return [
+        { icon: 'sun', label: 'Сегодня', run: () => P.openDay(today) },
+        { icon: 'arrow-right', label: 'Завтра', run: () => P.openDay(day(1)) },
+        { icon: 'rotate-ccw', label: 'Вчера', run: () => P.openDay(day(-1)) },
+        { icon: 'calendar-days', label: 'Выбрать дату…', run: (a) => P.datePicker(a, P.dayState.date, (k) => P.openDay(k), { align: 'center' }) },
+      ];
+      case 'calendar': return [
+        { icon: 'calendar-days', label: 'Этот месяц', run: () => P.openCalendarAt(today) },
+        { icon: 'arrow-right', label: 'Следующий месяц', run: () => { const d = P.parse(today); d.setDate(1); d.setMonth(d.getMonth() + 1); P.openCalendarAt(P.key(d)); } },
+        { icon: 'calendar-plus', label: 'Дело на выбранный день', run: () => P.openTaskModal({ date: P.calState.selected }) },
+      ];
+      case 'tasks': return [
+        { icon: 'search', label: 'Поиск по делам', run: () => P.focusSearch() },
+        { icon: 'layers', label: 'Все дела', run: () => P.openTasksFiltered('all') },
+        ...P.CAT_IDS.slice(0, 4).map((c) => ({ icon: P.catOf(c).icon, label: P.catOf(c).name, run: () => P.openTasksFiltered(c) })),
+      ];
+      case 'projects': return [
+        { icon: 'plus', label: 'Новый проект', run: () => { P.show('projects'); P.openProjectModal(); } },
+        { icon: 'target', label: 'Все проекты', run: () => P.show('projects') },
+      ];
+      case 'add': return [
+        { icon: 'sun', label: 'Дело на сегодня', run: () => P.openTaskModal({ date: today }) },
+        { icon: 'arrow-right', label: 'Дело на завтра', run: () => P.openTaskModal({ date: day(1) }) },
+        { icon: 'calendar-days', label: 'Дело на другой день…', run: (a) => P.datePicker(a, day(2), (k) => P.openTaskModal({ date: k }), { align: 'center' }) },
+        P.projectsOn() ? { icon: 'target', label: 'Новый проект', run: () => { P.show('projects'); P.openProjectModal(); } } : null,
+      ];
+      case 'settings': {
+        const st = P.sync && P.sync.state();
+        return [
+          st && st.session ? { icon: 'rotate-ccw', label: 'Синхронизировать сейчас', run: () => { P.sync.now(); P.toast('Синхронизация…'); } } : null,
+          { icon: 'palette', label: 'Цвет оформления', run: () => { P.show('settings'); scrollToCard('.theme-card'); } },
+          { icon: 'tag', label: 'Темы дел', run: () => { P.show('settings'); scrollToCard('.cats-card'); } },
+        ];
+      }
+    }
+    return [];
+  };
+  P.onLongPress(dock, '[data-dock]', (btn) => P.actionMenu(btn, dockCommands(btn.dataset.dock)), { delay: 380 });
+
   renderDock();
   // Монтируем экраны (экран проектов — всегда, а показывается только если функция включена)
   for (const id of ['day', 'calendar', 'tasks', 'projects', 'settings']) await P.screens[id].mount(document.getElementById('screen-' + id));
