@@ -60,25 +60,63 @@ struct Provider: TimelineProvider {
     }
 }
 
+// Строка дела: цветная точка на линии дня, название и время
 struct TaskRow: View {
     let task: WTask
     let compact: Bool
+    let isLast: Bool
+    var gap: CGFloat = 6
     var body: some View {
-        HStack(spacing: 7) {
-            RoundedRectangle(cornerRadius: 2).fill(Color(hex: task.c)).frame(width: 4, height: compact ? 15 : 28)
+        let dot: CGFloat = compact ? 8 : 9
+        let top: CGFloat = compact ? 4 : 5
+        HStack(alignment: .top, spacing: compact ? 8 : 10) {
+            Circle().fill(Color(hex: task.c).opacity(task.d ? 0.45 : 1))
+                .frame(width: dot, height: dot)
+                .padding(.top, top)
+                .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {
                 Text(task.t).font(.system(size: compact ? 12.5 : 14, weight: .semibold)).lineLimit(1)
-                    .strikethrough(false).foregroundColor(.white.opacity(task.d ? 0.45 : 1))
+                    .foregroundColor(.white.opacity(task.d ? 0.45 : 1))
                 if !compact {
-                    Text(task.time).font(.system(size: 11.5, weight: .medium)).foregroundColor(.white.opacity(0.6)).lineLimit(1)
+                    Text(task.d ? "выполнено" : task.time).font(.system(size: 11.5, weight: .medium))
+                        .foregroundColor(.white.opacity(0.55)).lineLimit(1)
                 }
             }
-            Spacer(minLength: 2)
-            if task.d {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: compact ? 12 : 15)).foregroundColor(Color(hex: "#34d399"))
-            } else if compact && !task.time.isEmpty && task.time != "Весь день" {
-                Text(task.time.components(separatedBy: " ").first ?? "").font(.system(size: 11, weight: .medium)).foregroundColor(.white.opacity(0.6))
+            Spacer(minLength: 0)
+        }
+        // линия дня — от точки до следующей точки
+        .background(alignment: .topLeading) {
+            if !isLast {
+                Rectangle().fill(Color.white.opacity(0.18))
+                    .frame(width: 1.5)
+                    .padding(.top, top + dot + 2)
+                    .padding(.bottom, -(gap + top) + 2)
+                    .padding(.leading, (dot - 1.5) / 2)
             }
+        }
+    }
+}
+
+// Полоса прогресса внизу: «Выполнено 1 из 4»
+struct ProgressFooter: View {
+    let done: Int
+    let total: Int
+    let compact: Bool
+    var body: some View {
+        let p = total == 0 ? 0 : Double(done) / Double(total)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(compact ? "\(done) из \(total)" : "Выполнено \(done) из \(total)")
+                Spacer(minLength: 0)
+                if !compact { Text("\(Int((p * 100).rounded()))%") }
+            }
+            .font(.system(size: 11, weight: .semibold)).foregroundColor(.white.opacity(0.6))
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.16))
+                    Capsule().fill(Color(hex: "#5ee2a0")).frame(width: max(p > 0 ? 5 : 0, g.size.width * p)).widgetAccentable()
+                }
+            }.frame(height: 5)
         }
     }
 }
@@ -87,39 +125,43 @@ struct PlanView: View {
     let entry: PlanEntry
     @Environment(\.widgetFamily) var family
 
-    var limit: Int { family == .systemLarge ? 9 : family == .systemMedium ? 4 : 3 }
+    var compact: Bool { family == .systemSmall }
+    var limit: Int { family == .systemLarge ? 7 : family == .systemMedium ? 3 : 3 }
     var ordered: [WTask] { entry.tasks.filter { !$0.d } + entry.tasks.filter { $0.d } }
 
     var header: some View {
         let f = DateFormatter(); f.locale = Locale(identifier: "ru_RU")
-        f.dateFormat = "EEEE"
-        let wd = f.string(from: entry.date).capitalized
-        let left = entry.tasks.filter { !$0.d }.count
-        return HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text("\(Calendar.current.component(.day, from: entry.date))").font(.system(size: family == .systemSmall ? 30 : 34, weight: .light))
-            VStack(alignment: .leading, spacing: 0) {
-                Text(wd).font(.system(size: 13, weight: .bold)).lineLimit(1)
-                Text(entry.tasks.isEmpty ? "свободно" : left == 0 ? "всё сделано" : "осталось \(left)")
-                    .font(.system(size: 11, weight: .medium)).foregroundColor(.white.opacity(0.65))
-            }
-            Spacer(minLength: 0)
-        }.foregroundColor(.white)
+        f.dateFormat = compact ? "EE, d MMM" : "EEEE, d MMMM"
+        return Text(f.string(from: entry.date).uppercased())
+            .font(.system(size: 11, weight: .bold)).kerning(0.6)
+            .foregroundColor(.white.opacity(0.6)).lineLimit(1)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: family == .systemSmall ? 5 : 7) {
+        let done = entry.tasks.filter { $0.d }.count
+        VStack(alignment: .leading, spacing: compact ? 6 : 8) {
             header
             if !entry.ready {
                 Text("Откройте PLNR, чтобы показать план").font(.system(size: 12)).foregroundColor(.white.opacity(0.7))
+                Spacer(minLength: 0)
             } else if entry.tasks.isEmpty {
-                Text("На сегодня дел нет").font(.system(size: 13, weight: .medium)).foregroundColor(.white.opacity(0.7))
+                Text("Дел нет — свободный день").font(.system(size: 13, weight: .medium)).foregroundColor(.white.opacity(0.75))
+                Spacer(minLength: 0)
             } else {
-                ForEach(ordered.prefix(limit), id: \.self) { TaskRow(task: $0, compact: family == .systemSmall) }
-                if ordered.count > limit {
-                    Text("ещё \(ordered.count - limit)").font(.system(size: 11, weight: .semibold)).foregroundColor(.white.opacity(0.55))
+                let shown = Array(ordered.prefix(limit))
+                let gap: CGFloat = compact ? 5 : (family == .systemLarge ? 10 : 6)
+                VStack(alignment: .leading, spacing: gap) {
+                    ForEach(Array(shown.enumerated()), id: \.offset) { i, t in
+                        TaskRow(task: t, compact: compact, isLast: i == shown.count - 1, gap: gap)
+                    }
+                    if ordered.count > limit {
+                        Text("ещё \(ordered.count - limit)").font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.5)).padding(.leading, compact ? 16 : 19)
+                    }
                 }
+                Spacer(minLength: 0)
+                ProgressFooter(done: done, total: entry.tasks.count, compact: compact)
             }
-            Spacer(minLength: 0)
         }
     }
 }
@@ -128,25 +170,36 @@ struct LockView: View {
     let entry: PlanEntry
     var body: some View {
         let next = entry.tasks.first { !$0.d }
+        let done = entry.tasks.filter { $0.d }.count
         VStack(alignment: .leading, spacing: 1) {
-            Text(next == nil ? "PLNR" : (next!.time)).font(.system(size: 12, weight: .semibold)).widgetAccentable()
+            Text(entry.tasks.isEmpty ? "PLNR" : "Выполнено \(done) из \(entry.tasks.count)").font(.system(size: 12, weight: .semibold)).widgetAccentable()
             Text(next?.t ?? (entry.tasks.isEmpty ? "Дел нет" : "Всё сделано")).font(.system(size: 14, weight: .semibold)).lineLimit(2)
         }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// Фон «как стекло»: полупрозрачный графит со светлой кромкой.
+// В режиме «Прозрачные» на экране «Домой» iPhone сам заменит его настоящим стеклом.
+struct GlassBackground: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color(hex: "#46536b").opacity(0.92), Color(hex: "#2b3446").opacity(0.94)],
+                           startPoint: .top, endPoint: .bottom)
+            ContainerRelativeShape()
+                .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.06), Color.white.opacity(0.14)],
+                                             startPoint: .top, endPoint: .bottom), lineWidth: 1)
+        }
     }
 }
 
 struct EntryView: View {
     let entry: PlanEntry
     @Environment(\.widgetFamily) var family
-    var bg: LinearGradient {
-        LinearGradient(colors: [Color(hex: entry.theme?.bg1 ?? "#0b2266"), Color(hex: entry.theme?.bg0 ?? "#061235")],
-                       startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
     var body: some View {
         if family == .accessoryRectangular {
             LockView(entry: entry).containerBackground(for: .widget) { Color.clear }
         } else {
-            PlanView(entry: entry).containerBackground(for: .widget) { bg }
+            PlanView(entry: entry).containerBackground(for: .widget) { GlassBackground() }
         }
     }
 }
