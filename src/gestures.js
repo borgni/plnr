@@ -11,9 +11,12 @@ window.P = window.P || {};
   };
 
   /* onLongPress(root, '.selector', (el, point) => ...) */
-  let suppressUntil = 0;
+  // после удержания гасим только «щелчок отпускания» по самому удержанному элементу —
+  // следующее нажатие (например, пункт меню) срабатывает с первого раза
+  let suppressEl = null, suppressUntil = 0;
   document.addEventListener('click', (e) => {
-    if (Date.now() < suppressUntil) { e.preventDefault(); e.stopPropagation(); suppressUntil = 0; }
+    if (suppressEl && Date.now() < suppressUntil && suppressEl.contains(e.target)) { e.preventDefault(); e.stopPropagation(); }
+    suppressEl = null;
   }, true);
 
   P.onLongPress = (root, selector, fn, { delay = 430 } = {}) => {
@@ -33,7 +36,7 @@ window.P = window.P || {};
       timer = setTimeout(() => {
         const target = el;
         cancel();
-        suppressUntil = Date.now() + 700;
+        suppressEl = target; suppressUntil = Date.now() + 1500;
         P.haptic('MEDIUM');
         target.classList.add('lp-pop');
         setTimeout(() => target.classList.remove('lp-pop'), 360);

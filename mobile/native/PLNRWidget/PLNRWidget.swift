@@ -97,27 +97,21 @@ struct TaskRow: View {
     }
 }
 
-// Полоса прогресса внизу: «Выполнено 1 из 4»
-struct ProgressFooter: View {
+// Кольцо прогресса с цифрой «1/4»
+struct ProgressRing: View {
     let done: Int
     let total: Int
-    let compact: Bool
+    let size: CGFloat
+    let line: CGFloat
     var body: some View {
         let p = total == 0 ? 0 : Double(done) / Double(total)
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(compact ? "\(done) из \(total)" : "Выполнено \(done) из \(total)")
-                Spacer(minLength: 0)
-                if !compact { Text("\(Int((p * 100).rounded()))%") }
-            }
-            .font(.system(size: 11, weight: .semibold)).foregroundColor(.white.opacity(0.6))
-            GeometryReader { g in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.16))
-                    Capsule().fill(Color(hex: "#5ee2a0")).frame(width: max(p > 0 ? 5 : 0, g.size.width * p)).widgetAccentable()
-                }
-            }.frame(height: 5)
-        }
+        ZStack {
+            Circle().stroke(Color.white.opacity(0.18), lineWidth: line)
+            Circle().trim(from: 0, to: p).stroke(Color(hex: "#a7f3d0"), style: StrokeStyle(lineWidth: line, lineCap: .round))
+                .rotationEffect(.degrees(-90)).widgetAccentable()
+            Text("\(done)/\(total)").font(.system(size: size * 0.24, weight: .bold)).minimumScaleFactor(0.6).lineLimit(1)
+                .foregroundColor(.white).padding(.horizontal, line)
+        }.frame(width: size, height: size)
     }
 }
 
@@ -125,42 +119,73 @@ struct PlanView: View {
     let entry: PlanEntry
     @Environment(\.widgetFamily) var family
 
-    var compact: Bool { family == .systemSmall }
-    var limit: Int { family == .systemLarge ? 7 : family == .systemMedium ? 3 : 3 }
     var ordered: [WTask] { entry.tasks.filter { !$0.d } + entry.tasks.filter { $0.d } }
+    var done: Int { entry.tasks.filter { $0.d }.count }
 
-    var header: some View {
-        let f = DateFormatter(); f.locale = Locale(identifier: "ru_RU")
-        f.dateFormat = compact ? "EE, d MMM" : "EEEE, d MMMM"
-        return Text(f.string(from: entry.date).uppercased())
-            .font(.system(size: 11, weight: .bold)).kerning(0.6)
-            .foregroundColor(.white.opacity(0.6)).lineLimit(1)
+    func fmt(_ f: String) -> String {
+        let d = DateFormatter(); d.locale = Locale(identifier: "ru_RU"); d.dateFormat = f
+        return d.string(from: entry.date)
+    }
+    func label(_ t: String) -> some View {
+        Text(t.uppercased()).font(.system(size: 11, weight: .bold)).kerning(0.5)
+            .foregroundColor(.white.opacity(0.65)).lineLimit(1)
+    }
+    func list(_ n: Int, time: Bool, gap: CGFloat, compact: Bool) -> some View {
+        let shown = Array(ordered.prefix(n))
+        return VStack(alignment: .leading, spacing: gap) {
+            ForEach(Array(shown.enumerated()), id: \.offset) { i, t in
+                TaskRow(task: t, compact: !time, isLast: i == shown.count - 1, gap: gap)
+            }
+            if ordered.count > n {
+                Text("ещё \(ordered.count - n)").font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.55)).padding(.leading, 18)
+            }
+        }
+    }
+    var empty: some View {
+        Text(entry.ready ? "Дел нет — свободный день" : "Откройте PLNR, чтобы показать план")
+            .font(.system(size: 13, weight: .medium)).foregroundColor(.white.opacity(0.75))
     }
 
     var body: some View {
-        let done = entry.tasks.filter { $0.d }.count
-        VStack(alignment: .leading, spacing: compact ? 6 : 8) {
-            header
-            if !entry.ready {
-                Text("Откройте PLNR, чтобы показать план").font(.system(size: 12)).foregroundColor(.white.opacity(0.7))
-                Spacer(minLength: 0)
-            } else if entry.tasks.isEmpty {
-                Text("Дел нет — свободный день").font(.system(size: 13, weight: .medium)).foregroundColor(.white.opacity(0.75))
-                Spacer(minLength: 0)
-            } else {
-                let shown = Array(ordered.prefix(limit))
-                let gap: CGFloat = compact ? 5 : (family == .systemLarge ? 10 : 6)
-                VStack(alignment: .leading, spacing: gap) {
-                    ForEach(Array(shown.enumerated()), id: \.offset) { i, t in
-                        TaskRow(task: t, compact: compact, isLast: i == shown.count - 1, gap: gap)
-                    }
-                    if ordered.count > limit {
-                        Text("ещё \(ordered.count - limit)").font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.5)).padding(.leading, compact ? 16 : 19)
-                    }
+        switch family {
+        case .systemSmall:
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top) {
+                    label(fmt("EE, d"))
+                    Spacer(minLength: 4)
+                    ProgressRing(done: done, total: entry.tasks.count, size: 54, line: 6)
                 }
+                Spacer(minLength: 4)
+                if let next = ordered.first(where: { !$0.d }) {
+                    Text("дальше").font(.system(size: 11, weight: .semibold)).foregroundColor(.white.opacity(0.6))
+                    Text(next.t).font(.system(size: 14, weight: .bold)).foregroundColor(.white).lineLimit(2)
+                } else if !entry.tasks.isEmpty {
+                    Text("Всё сделано").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                } else { empty }
+            }
+        case .systemMedium:
+            HStack(spacing: 14) {
+                VStack(spacing: 8) {
+                    ProgressRing(done: done, total: entry.tasks.count, size: 74, line: 7)
+                    label(fmt("EE, d MMM"))
+                }.frame(width: 86)
+                VStack(alignment: .leading, spacing: 0) {
+                    if entry.tasks.isEmpty { empty } else { list(3, time: false, gap: 8, compact: true) }
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            }
+        default:
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(fmt("d MMMM")).font(.system(size: 26, weight: .light)).foregroundColor(.white).lineLimit(1)
+                        label(fmt("EEEE"))
+                    }
+                    Spacer(minLength: 8)
+                    ProgressRing(done: done, total: entry.tasks.count, size: 62, line: 6)
+                }
+                if entry.tasks.isEmpty { empty } else { list(6, time: true, gap: 11, compact: false) }
                 Spacer(minLength: 0)
-                ProgressFooter(done: done, total: entry.tasks.count, compact: compact)
             }
         }
     }
@@ -183,10 +208,11 @@ struct LockView: View {
 struct GlassBackground: View {
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(hex: "#46536b").opacity(0.92), Color(hex: "#2b3446").opacity(0.94)],
+            LinearGradient(colors: [Color(red: 20/255, green: 130/255, blue: 120/255).opacity(0.9),
+                                    Color(red: 6/255, green: 64/255, blue: 62/255).opacity(0.94)],
                            startPoint: .top, endPoint: .bottom)
             ContainerRelativeShape()
-                .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.06), Color.white.opacity(0.14)],
+                .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.4), Color.white.opacity(0.06), Color(red: 150/255, green: 1, blue: 230/255).opacity(0.2)],
                                              startPoint: .top, endPoint: .bottom), lineWidth: 1)
         }
     }
@@ -199,7 +225,7 @@ struct EntryView: View {
         if family == .accessoryRectangular {
             LockView(entry: entry).containerBackground(for: .widget) { Color.clear }
         } else {
-            PlanView(entry: entry).containerBackground(for: .widget) { GlassBackground() }
+            PlanView(entry: entry).padding(2).containerBackground(for: .widget) { GlassBackground() }
         }
     }
 }

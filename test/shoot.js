@@ -107,6 +107,19 @@ app.whenReady().then(async () => {
       console.log('WHEEL2', await win.webContents.executeJavaScript(`document.querySelector('.modal [name=start]').value+' '+document.querySelector('.modal [name=end]').value+' '+!!document.querySelector('.tp')`)); }
     if (s === 'force') { await run(`document.body.classList.add('mobile'); P.refreshDock(); P.show('day')`); await sleep(400); }
     if (s === 'mproj') { await run(`P.store.setSetting('projectsEnabled', true); P.refreshDock(); P.store.addProject({name:'IOT', color:'#34d399', deadline:P.addDays(P.todayKey(),11), base:40}); P.store.addProject({name:'Сайт СтройПласт', color:'#a78bfa'}); P.show('projects')`); await shot('m6-proj', 900); }
+    if (s === 'onetap') {
+      const r = await win.webContents.executeJavaScript(`(async()=>{
+        const sl=(ms)=>new Promise(r=>setTimeout(r,ms));
+        P.openDay(P.todayKey()); await sl(500);
+        const b=document.querySelector('#dock [data-dock=day]'); const rc=b.getBoundingClientRect();
+        const o={pointerType:'touch',bubbles:true,clientX:rc.left+5,clientY:rc.top+5,pointerId:7};
+        b.dispatchEvent(new PointerEvent('pointerdown',o)); await sl(500); b.dispatchEvent(new PointerEvent('pointerup',o));
+        await sl(120);
+        const items=[...document.querySelectorAll('.ctx-item')]; const t=items.find(x=>x.textContent.includes('Завтра'));
+        t.click(); await sl(300);
+        return JSON.stringify({menu:items.length, date:P.dayState.date, tomorrow:P.addDays(P.todayKey(),1)});
+      })()`); console.log('ONETAP', r);
+    }
     if (s === 'mlp') {
       const press = async (sel, name) => {
         await run(`(()=>{ const el=document.querySelector('${sel}'); const r=el.getBoundingClientRect(); const o={pointerType:'touch',bubbles:true,clientX:r.left+r.width/2,clientY:r.top+r.height/2,pointerId:5}; el.dispatchEvent(new PointerEvent('pointerdown',o)); setTimeout(()=>el.dispatchEvent(new PointerEvent('pointerup',o)),600); })()`);

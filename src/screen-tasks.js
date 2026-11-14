@@ -99,7 +99,7 @@ window.P = window.P || {};
 
   function render() {
     if (!root.querySelector('.tasks-layout')) {
-      root.innerHTML = `<div class="tasks-layout">
+      root.innerHTML = `<div class="m-hero-slot"></div><div class="tasks-layout">
         <div class="new-card glass">
           <div class="new-head">
             <div class="new-ico">${P.icon('calendar-plus')}</div>
@@ -152,9 +152,22 @@ window.P = window.P || {};
     const top = sc.scrollTop;
     sc.innerHTML = listHTML();
     sc.scrollTop = top;
-    const sd = root.querySelector('[data-act=show-done]');
-    sd.classList.toggle('on', T.showDone);
-    sd.innerHTML = `${P.icon(T.showDone ? 'eye' : 'eye-off')}Выполненные`;
+    root.querySelectorAll('.list-head [data-act=show-done]').forEach((sd) => {
+      sd.classList.toggle('on', T.showDone);
+      sd.innerHTML = `${P.icon(T.showDone ? 'eye' : 'eye-off')}Выполненные`;
+    });
+    // iPhone: карточка «Все дела» с прогрессом за неделю
+    const slot = root.querySelector('.m-hero-slot');
+    if (slot) {
+      if (!P.isMobile()) { slot.innerHTML = ''; return; }
+      const today = P.todayKey(), from = P.addDays(today, -P.mondayIndex(P.parse(today))), to = P.addDays(from, 6);
+      const week = P.store.all().filter((t) => t.date >= from && t.date <= to);
+      const active = P.store.all().filter((t) => !t.done && t.date >= today).length;
+      const wd = week.filter((t) => t.done).length;
+      slot.innerHTML = P.mhero({ label: 'ВСЕ ДЕЛА', big: String(active), done: wd, total: week.length,
+        barText: week.length ? `за неделю ${wd} из ${week.length}` : 'на этой неделе пусто',
+        right: `<button class="mhero-pill glass ${T.showDone ? 'on' : ''}" data-act="show-done">${P.icon(T.showDone ? 'eye' : 'eye-off')}Выполненные</button>` });
+    }
   }
 
   // поиск: открыть «Дела» и поставить курсор в строку поиска

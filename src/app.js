@@ -31,7 +31,7 @@ window.P = window.P || {};
       } catch {}
     }
   }
-  mq.addEventListener('change', () => { setMobile(); if (active) P.show(active); });
+  mq.addEventListener('change', () => { setMobile(); if (P.refreshDock) P.refreshDock(); if (active) P.show(active); });
 
   await P.store.init();
 
@@ -41,7 +41,8 @@ window.P = window.P || {};
   // док собирается заново, когда в настройках включают или выключают «Проекты»
   let dockKey = '';
   function renderDock() {
-    const items = ALL_DOCK.filter((d) => !d.optional || P.projectsOn());
+    // на iPhone «+» в панели не нужен: новое дело — нажатием на карточку дня
+    const items = ALL_DOCK.filter((d) => (!d.optional || P.projectsOn()) && !(d.action && document.body.classList.contains('mobile')));
     const key = items.map((d) => d.id).join();
     if (key === dockKey) return; // состав не изменился — док не пересобираем
     dockKey = key;

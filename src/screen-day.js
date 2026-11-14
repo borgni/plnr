@@ -23,6 +23,7 @@ window.P = window.P || {};
     const rel = P.relLabel(S.date);
     const isToday = S.date === P.todayKey();
     const counts = Object.fromEntries(P.filterCats().map((id) => [id, all.filter((t) => t.category === id).length]));
+    if (P.isMobile()) return mobileHead(all, done, rel, isToday, counts);
 
     return `
     <div class="day-head">
@@ -64,6 +65,45 @@ window.P = window.P || {};
           ${P.icon(c.icon)}<span>${P.esc(c.name)}</span><em>${counts[id]}</em></button>`;
       }).join('')}
     </div>`;
+  }
+
+  /* iPhone: карточка дня (нажатие — новое дело, удержание — календарь), переключатель дней, темы */
+  function mobileHead(all, done, rel, isToday, counts) {
+    const d = P.parse(S.date);
+    const wd = P.weekday(S.date).toUpperCase();
+    const label = rel && !isToday ? `${rel.toUpperCase()} · ${wd}` : wd;
+    return `${P.mhero({
+      label, big: `${P.pad(d.getDate())}.${P.pad(d.getMonth() + 1)}`, done, total: all.length,
+      barText: all.length ? `${done} из ${all.length}` : 'дел нет', act: 'hero', tag: 'button',
+      aria: 'Нажмите — новое дело, удерживайте — выбрать дату',
+    })}
+    <div class="day-nav glass mnav">
+      <button class="icon-btn" data-act="prev" aria-label="Предыдущий день">${P.icon('chevron-left')}</button>
+      <button class="nav-today ${isToday ? 'dim' : ''}" data-act="today">Сегодня</button>
+      <button class="icon-btn" data-act="next" aria-label="Следующий день">${P.icon('chevron-right')}</button>
+    </div>
+    <div class="cat-filter">
+      ${P.filterCats().map((id) => {
+        const c = P.catOf(id);
+        return `<button class="cat-chip ${S.hidden.has(id) ? 'off' : ''}" data-filter="${id}" style="--c:${c.color}">${P.icon(c.icon)}<span>${P.esc(c.name)}</span><em>${counts[id]}</em></button>`;
+      }).join('')}
+    </div>`;
+  }
+
+  /* iPhone: компактная карточка дела — цветная полоска темы, название, тема и время, галочка справа */
+  function mobileCard(t) {
+    const c = P.catOf(t.category);
+    const time = P.timeRange(t);
+    return `<article class="mcard glass ${t.done ? 'done' : ''}" data-id="${t.id}" style="--c:${c.color}">
+      <i class="mcard-bar"></i>
+      <div class="mcard-body">
+        <span class="mcard-title">${P.esc(t.title)}</span>
+        <span class="mcard-meta">${P.esc(c.name)} · ${time.charAt(0).toLowerCase() + time.slice(1)}${t.seriesId ? ' · повтор' : ''}</span>
+        ${t.note ? `<span class="mcard-note">${P.esc(t.note)}</span>` : ''}
+        ${P.projTag(t)}
+      </div>
+      ${check(t)}
+    </article>`;
   }
 
   /* ---------- Карточки ---------- */
@@ -160,8 +200,7 @@ window.P = window.P || {};
     // телефон: простой вертикальный список (невыполненные сверху по времени, выполненные внизу)
     if (P.isMobile()) {
       board.dataset.mode = 'list';
-      board.innerHTML = `<div class="mlist">${tasks.map(rowCard).join('')}
-        <button class="add-card" data-act="add">${P.icon('plus')}<span>Добавить дело</span></button></div>`;
+      board.innerHTML = `<div class="mlist">${tasks.map(mobileCard).join('')}</div>`;
       return;
     }
 
@@ -317,7 +356,7 @@ window.P = window.P || {};
     const actEl = e.target.closest('[data-act]');
     if (!actEl) {
       // нажатие на любое место карточки открывает дело
-      const c = e.target.closest('.tcard, .detail');
+      const c = e.target.closest('.tcard, .detail, .mcard');
       if (c) P.openTaskModal({ task: P.store.get(c.dataset.id) });
       return;
     }
@@ -330,7 +369,7 @@ window.P = window.P || {};
       case 'prev': go(P.addDays(S.date, -1), -1); break;
       case 'next': go(P.addDays(S.date, 1), 1); break;
       case 'today': go(P.todayKey()); break;
-      case 'add': P.openTaskModal({ date: S.date }); break;
+      case 'add': case 'hero': P.openTaskModal({ date: S.date }); break;
       case 'toggle': e.stopPropagation(); P.toggleTask(id, e); break;
       case 'edit': P.openTaskModal({ task: P.store.get(id) }); break;
       case 'tomorrow': P.moveTask(id, P.addDays(P.store.get(id).date, 1)); break;
@@ -347,7 +386,9 @@ window.P = window.P || {};
       root = el;
       root.addEventListener('click', onClick);
       // долгое нажатие на дело — меню с действиями
-      P.onLongPress(root, '.tcard[data-id], .scard[data-id], .detail[data-id]', (el) => P.taskMenu(el, el.dataset.id));
+      P.onLongPress(root, '.tcard[data-id], .scard[data-id], .detail[data-id], .mcard[data-id]', (el) => P.taskMenu(el, el.dataset.id));
+      // удержание карточки дня — выбрать дату в календаре
+      P.onLongPress(root, '.mhero', (el) => P.datePicker(el, S.date, (k) => go(k), { align: 'center' }));
       root.addEventListener('dblclick', (e) => {
         const c = e.target.closest('.scard');
         if (c) P.openTaskModal({ task: P.store.get(c.dataset.id) });

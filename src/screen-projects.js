@@ -64,7 +64,12 @@ window.P = window.P || {};
   function render() {
     const list = P.store.projects();
     const prevTop = root.querySelector('.projects-scroll')?.scrollTop || 0;
-    root.innerHTML = `<div class="proj-head">
+    const avg = list.length ? Math.round(list.reduce((a, p) => a + P.store.projectStats(p.id).pct, 0) / list.length) : 0;
+    const activeN = list.filter((p) => P.store.projectStats(p.id).pct < 100).length;
+    const mhero = P.isMobile() ? P.mhero({ label: 'ПРОЕКТЫ', big: `${activeN} ${P.plural(activeN, 'активный', 'активных', 'активных')}`,
+      done: avg, total: 100, barText: list.length ? `в среднем ${avg}%` : 'пока нет',
+      right: `<button class="mhero-add" data-pact="new" aria-label="Новый проект">${P.icon('plus')}</button>` }) : '';
+    root.innerHTML = `${mhero}<div class="proj-head">
         <div>
           <h1 class="proj-h1">Проекты</h1>
           <span class="muted">Длительные цели: прогресс растёт, когда вы выполняете дела по проекту</span>

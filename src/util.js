@@ -129,3 +129,12 @@ P.h = (html) => { const t = document.createElement('template'); t.innerHTML = ht
 
 // Неделя с понедельника: индекс 0..6
 P.mondayIndex = (d) => (d.getDay() + 6) % 7;
+
+/* Шапка-карточка вкладок на iPhone: подпись, крупный заголовок, справа значок/кнопки, внизу полоса прогресса */
+P.mhero = ({ label, big, right = '', done = 0, total = 0, barText = '', act = '', tag = 'div', aria = '' }) => {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return `<${tag} class="mhero glass" ${act ? `data-act="${act}"` : ''} ${aria ? `aria-label="${P.esc(aria)}"` : ''}>
+    <div class="mhero-top"><div class="mhero-txt"><span class="mhero-label">${label}</span><span class="mhero-big ${String(big).length > 8 ? 'long' : ''}">${big}</span></div>${right || '<span class="mhero-brand">PLNR</span>'}</div>
+    <div class="mhero-bar"><div class="mbar"><i style="width:${pct}%"></i></div><b>${barText}</b></div>
+  </${tag}>`;
+};

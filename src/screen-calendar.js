@@ -13,6 +13,7 @@ window.P = window.P || {};
   }
 
   function headHTML() {
+    if (P.isMobile()) return mobileHeadHTML();
     const y = C.month.getFullYear(), m = C.month.getMonth();
     const isCur = y === now.getFullYear() && m === now.getMonth();
     return `<div class="cal-head">
@@ -32,6 +33,25 @@ window.P = window.P || {};
         <button class="icon-btn" data-act="next" title="Следующий месяц (→)">${P.icon('chevron-right')}</button>
       </div>
     </div>`;
+  }
+
+  /* iPhone: карточка месяца со стрелками и прогрессом за месяц, ниже темы */
+  function mobileHeadHTML() {
+    const y = C.month.getFullYear(), m = C.month.getMonth();
+    const prefix = `${y}-${P.pad(m + 1)}-`;
+    const mt = P.store.all().filter((t) => t.date.startsWith(prefix));
+    const done = mt.filter((t) => t.done).length;
+    const right = `<div class="mhero-btns">
+      <button class="icon-btn glass" data-act="prev" aria-label="Предыдущий месяц">${P.icon('chevron-left')}</button>
+      <button class="icon-btn glass" data-act="next" aria-label="Следующий месяц">${P.icon('chevron-right')}</button></div>`;
+    return `<div class="cal-head">${P.mhero({ label: String(y), big: P.MONTHS[m], right, done, total: mt.length,
+      barText: mt.length ? `${done} из ${mt.length} за месяц` : 'дел нет', act: 'pick' })}
+      <div class="cat-filter inline">
+        ${P.filterCats().map((id) => {
+          const c = P.catOf(id);
+          return `<button class="cat-chip ${C.hidden.has(id) ? 'off' : ''}" data-filter="${id}" style="--c:${c.color}">${P.icon(c.icon)}<span>${P.esc(c.name)}</span></button>`;
+        }).join('')}
+      </div></div>`;
   }
 
   function gridHTML() {
@@ -74,6 +94,7 @@ window.P = window.P || {};
   }
 
   function sideHTML() {
+    if (P.isMobile()) return mobileSideHTML();
     const k = C.selected;
     const list = P.store.on(k);
     const done = list.filter((t) => t.done).length;
@@ -118,6 +139,27 @@ window.P = window.P || {};
           return `<button class="stat-row" data-goto-cat="${id}" style="--c:${P.catOf(id).color}" title="Показать все дела темы">
             <span>${P.esc(P.catOf(id).name)}</span><span class="bar"><i style="width:${(n / maxCat) * 100}%"></i></span><b>${n}</b></button>`;
         }).join('')}
+      </div>
+    </aside>`;
+  }
+
+  /* iPhone: выбранный день — заголовок и карточки дел в стиле «Сегодня» */
+  function mobileSideHTML() {
+    const k = C.selected;
+    const list = P.store.on(k).sort(P.byDoneThenTime);
+    const rel = P.relLabel(k);
+    return `<aside class="cal-side mside">
+      <button class="mside-head" data-act="open-day"><b>${P.parse(k).getDate()} · ${P.weekday(k).toLowerCase()}</b><span>${rel ? rel.toLowerCase() + ' · ' : ''}удерживайте день — новое дело</span></button>
+      <div class="side-list" data-k="${k}">
+        ${list.length ? list.map((t) => {
+          const c = P.catOf(t.category);
+          const tr = P.timeRange(t);
+          return `<div class="side-item mcard glass ${t.done ? 'done' : ''}" data-id="${t.id}" style="--c:${c.color}">
+            <i class="mcard-bar"></i>
+            <div class="mcard-body" data-act="edit"><span class="mcard-title">${P.esc(t.title)}</span><span class="mcard-meta">${P.esc(c.name)} · ${tr.charAt(0).toLowerCase() + tr.slice(1)}</span></div>
+            <button class="check ${t.done ? 'on' : ''}" data-act="toggle">${P.icon('check')}</button>
+          </div>`;
+        }).join('') : `<button class="mside-empty" data-act="add-sel">${P.icon('plus')}Нет дел — нажмите, чтобы добавить</button>`}
       </div>
     </aside>`;
   }

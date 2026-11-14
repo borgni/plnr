@@ -1,6 +1,6 @@
 {
   "name": "plannner",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "PLNR — день, календарь и дела",
   "main": "main.js",
   "scripts": {
