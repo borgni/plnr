@@ -47,13 +47,29 @@ window.P = window.P || {};
     for (const [id, ts] of Object.entries(local.deleted || {})) deleted[id] = Math.max(ts, deleted[id] || 0);
     const cutoff = Date.now() - TOMBSTONE_DAYS * 86400000;
     for (const id of Object.keys(deleted)) if (deleted[id] < cutoff) delete deleted[id];
-    const localNewerSettings = (local.settingsAt || 0) >= (remote.settingsAt || 0);
+    // настройки сливаем по каждой отдельно (темы дел, цвет, проекты)
+    const tsOf = (d, k) => {
+      const m = d.settingsTs;
+      if (m && typeof m === 'object' && Object.keys(m).length) return +m[k] || 0;
+      return +d.settingsAt || 0; // данные от старой версии без отдельных меток
+    };
+    const settings = {}, settingsTs = {};
+    const ls = local.settings || {}, rs = remote.settings || {};
+    for (const k of new Set([...Object.keys(ls), ...Object.keys(rs)])) {
+      const lt = tsOf(local, k), rt = tsOf(remote, k);
+      // при равенстве — облако, чтобы все устройства пришли к одному
+      const useLocal = !(k in rs) || ((k in ls) && lt > rt);
+      settings[k] = structuredClone(useLocal ? ls[k] : rs[k]);
+      const t = Math.max(lt, rt);
+      if (t > 0) settingsTs[k] = t;
+    }
     return {
       version: 1,
       tasks: mergeList(local.tasks, remote.tasks, deleted),
       projects: mergeList(local.projects, remote.projects, deleted),
       deleted,
-      settings: structuredClone(localNewerSettings ? local.settings : remote.settings),
+      settings,
+      settingsTs,
       settingsAt: Math.max(local.settingsAt || 0, remote.settingsAt || 0),
     };
   };
@@ -63,7 +79,9 @@ window.P = window.P || {};
     t: [...(d.tasks || [])].sort((a, b) => (a.id < b.id ? -1 : 1)),
     p: [...(d.projects || [])].sort((a, b) => (a.id < b.id ? -1 : 1)),
     d: Object.keys(d.deleted || {}).sort().map((k) => [k, d.deleted[k]]),
-    s: d.settings, sa: d.settingsAt || 0,
+    s: Object.keys(d.settings || {}).sort().map((k) => [k, d.settings[k]]),
+    st: Object.keys(d.settingsTs || {}).sort().map((k) => [k, d.settingsTs[k]]),
+    sa: d.settingsAt || 0,
   });
 
   /* ---------- Сеть ---------- */

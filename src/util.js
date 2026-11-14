@@ -93,7 +93,7 @@ P.isMobile = () => document.body.classList.contains('mobile');
 P.onSwipe = (el, fn) => {
   let x0 = 0, y0 = 0, t0 = 0, tracking = false;
   el.addEventListener('touchstart', (e) => {
-    if (e.touches.length !== 1 || e.target.closest('input, textarea, .tp-col, .modal')) { tracking = false; return; }
+    if (e.touches.length !== 1 || e.target.closest('input, textarea, .tp-col, .modal, .cat-filter, .list-filter')) { tracking = false; return; }
     tracking = true; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
   }, { passive: true });
   el.addEventListener('touchend', (e) => {

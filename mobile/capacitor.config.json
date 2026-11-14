@@ -8,5 +8,12 @@
     "backgroundColor": "#061235",
     "scrollEnabled": false,
     "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "Keyboard": {
+      "resize": "native",
+      "style": "DARK",
+      "resizeOnFullScreen": true
+    }
   }
 }

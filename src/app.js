@@ -17,7 +17,20 @@ window.P = window.P || {};
   const mq = matchMedia('(max-width: 700px)');
   const setMobile = () => document.body.classList.toggle('mobile', P.isNative() || mq.matches);
   setMobile();
-  if (P.isNative()) document.body.classList.add('native');
+  if (P.isNative()) {
+    document.body.classList.add('native');
+    // клавиатура iPhone: тёмная, без серой панели «стрелки/Готово» над ней — как в обычных приложениях
+    const kb = window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
+    if (kb) {
+      const quiet = (f) => { try { const r = f(); if (r && r.catch) r.catch(() => {}); } catch {} };
+      quiet(() => kb.setAccessoryBarVisible({ isVisible: false }));
+      quiet(() => kb.setStyle({ style: 'DARK' }));
+      try {
+        kb.addListener('keyboardWillShow', () => document.body.classList.add('kb-open'));
+        kb.addListener('keyboardWillHide', () => document.body.classList.remove('kb-open'));
+      } catch {}
+    }
+  }
   mq.addEventListener('change', () => { setMobile(); if (active) P.show(active); });
 
   await P.store.init();
@@ -26,8 +39,12 @@ window.P = window.P || {};
 
   const dock = document.getElementById('dock');
   // док собирается заново, когда в настройках включают или выключают «Проекты»
+  let dockKey = '';
   function renderDock() {
     const items = ALL_DOCK.filter((d) => !d.optional || P.projectsOn());
+    const key = items.map((d) => d.id).join();
+    if (key === dockKey) return; // состав не изменился — док не пересобираем
+    dockKey = key;
     ORDER = items.filter((d) => !d.action).map((d) => d.id);
     dock.innerHTML = `<div class="dock-bubble"></div>` + items.map((d) => `
       <button class="dock-btn ${d.action ? 'dock-add' : ''} ${d.optional ? 'dock-new' : ''}" data-dock="${d.id}" aria-label="${d.label}">
@@ -45,8 +62,16 @@ window.P = window.P || {};
     const btn = dock.querySelector(`[data-dock="${active}"]`);
     const bub = dock.querySelector('.dock-bubble');
     if (!btn) return;
-    bub.style.width = btn.offsetWidth + 'px';
-    bub.style.transform = `translateX(${btn.offsetLeft}px)`;
+    // в горизонтальном положении iPhone панель стоит столбиком — пузырь едет вниз-вверх
+    if (getComputedStyle(dock).flexDirection === 'column') {
+      bub.style.width = '';
+      bub.style.height = btn.offsetHeight + 'px';
+      bub.style.transform = `translateY(${btn.offsetTop}px)`;
+    } else {
+      bub.style.height = '';
+      bub.style.width = btn.offsetWidth + 'px';
+      bub.style.transform = `translateX(${btn.offsetLeft}px)`;
+    }
   }
 
   function updateBadges() {
@@ -73,7 +98,7 @@ window.P = window.P || {};
     document.querySelectorAll('.screen').forEach((s) => {
       const on = s.dataset.screen === name;
       s.classList.toggle('active', on);
-      if (on && prev && prev !== name) {
+      if (on && prev && prev !== name && !document.body.classList.contains('mobile')) {
         s.classList.remove('slide-l', 'slide-r');
         void s.offsetWidth;
         s.classList.add(ORDER.indexOf(name) > ORDER.indexOf(prev) ? 'slide-r' : 'slide-l');
@@ -85,8 +110,12 @@ window.P = window.P || {};
     moveBubble();
   };
 
+  let shownTheme = null;
   P.applySettings = () => {
-    P.applyTheme(P.store.settings.theme || 'ocean');
+    const id = P.store.settings.theme || 'ocean';
+    if (id === shownTheme) return; // без лишней перекраски при каждой синхронизации
+    shownTheme = id;
+    P.applyTheme(id);
   };
 
   // Новое дело с учётом того, какой день сейчас открыт

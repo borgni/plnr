@@ -637,7 +637,7 @@ kbd { display: inline-grid; place-items: center; min-width: 26px; height: 26px; 
 .modal-wrap { position: fixed; inset: 0; display: grid; place-items: center; }
 .modal-backdrop { position: absolute; inset: 0; background: color-mix(in srgb, var(--shadow) 50%, transparent); backdrop-filter: blur(8px); opacity: 0; transition: opacity .25s; }
 .modal {
-  width: min(520px, 92vw); max-height: 88vh; overflow-y: auto; padding: 22px 26px 26px; border-radius: 30px;
+  width: min(520px, 92vw); max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; padding: 22px 26px 26px; border-radius: 30px;
   background: linear-gradient(145deg, color-mix(in srgb, var(--panel-a) 55%, transparent), color-mix(in srgb, var(--panel-b) 60%, transparent));
   backdrop-filter: blur(34px) saturate(180%);
   opacity: 0; transform: translateY(14px) scale(.96); transition: opacity .25s, transform .35s var(--spring);
@@ -647,7 +647,9 @@ kbd { display: inline-grid; place-items: center; min-width: 26px; height: 26px; 
 .modal-wrap.in .modal { opacity: 1; transform: none; }
 .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; position: relative; }
 .modal-head h2 { margin: 0; font-size: 22px; font-weight: 750; }
-.modal-body { position: relative; }
+.modal-head { flex: none; }
+/* листается только содержимое: кромка стекла и «ручка» окна остаются на месте и не наезжают на кнопки */
+.modal-body { position: relative; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -26px -26px; padding: 2px 26px 26px; scrollbar-width: thin; }
 .confirm p { margin: 4px 0 0; font-size: 15px; line-height: 1.55; color: var(--muted); }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
 
@@ -960,7 +962,16 @@ body.mobile .mlist .tcard-spacer, body.mobile .mlist .tcard-foot { display: none
 body.mobile .mlist .proj-tag { margin-top: 8px; }
 body.mobile .mlist .add-card { flex: none; height: 56px; flex-direction: row; gap: 10px; border-radius: 20px; }
 body.mobile .mlist .add-card .ico { width: 20px; height: 20px; padding: 6px; border-radius: 10px; }
-body.mobile .board.enter .tcard { animation-duration: .45s; }
+/* на iPhone стекло не «проявляется» через прозрачность: при смене вкладок всё появляется сразу,
+   а карточки лишь мягко сдвигаются — без мерцания размытия */
+body.mobile .screen.slide-r, body.mobile .screen.slide-l { animation: none; }
+body.mobile .set-hero, body.mobile .set-card, body.mobile .list-card, body.mobile .new-card, body.mobile .pcard, body.mobile .empty { animation: none; }
+body.mobile .board.enter .tcard, body.mobile .board.enter .add-card, body.mobile .board.enter .stack { animation: mSlideIn .38s var(--ease) both; animation-delay: calc(var(--i, 0) * 35ms); }
+@keyframes mSlideIn { from { transform: translateY(14px); } }
+body.mobile .board.from-right, body.mobile .board.from-left { animation-name: mBoardR; }
+body.mobile .board.from-left { animation-name: mBoardL; }
+@keyframes mBoardR { from { transform: translateX(36px); } }
+@keyframes mBoardL { from { transform: translateX(-36px); } }
 body.mobile .empty { margin-top: 20px; padding: 32px 22px; }
 body.mobile .check { width: 32px; height: 32px; }
 
@@ -982,7 +993,16 @@ body.mobile .cell-list { width: 100%; gap: 2px; margin-top: 2px; }
 body.mobile .cchip { height: 4px; padding: 0; border-radius: 2px; background: var(--c); }
 body.mobile .cchip > * { display: none; }
 body.mobile .cchip.done { background: var(--done); opacity: .7; }
-body.mobile .cal-side { padding: 14px; border-radius: 22px; gap: 10px; }
+/* весь экран календаря листается пальцем: месяц, выбранный день, все его дела и кнопки */
+body.mobile #screen-calendar { left: 0; right: 0; padding: 0 14px 18px; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+body.mobile #screen-calendar .cal-body { flex: none; grid-template-rows: auto auto; }
+body.mobile .cal-grid { flex: none; }
+body.mobile .cal-side { padding: 14px; border-radius: 22px; gap: 12px; min-height: 0; }
+body.mobile .cal-side .side-day { order: 0; }
+body.mobile .cal-side .side-actions { order: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+body.mobile .cal-side .side-actions .btn { height: 44px; justify-content: center; }
+body.mobile .cal-side .side-list { order: 2; flex: none; overflow: visible; min-height: 0; }
+body.mobile .side-item { min-height: 52px; }
 body.mobile .side-num { font-size: 40px; }
 body.mobile .side-wd { font-size: 17px; }
 body.mobile .side-stats { display: none; }
@@ -1040,7 +1060,11 @@ body.mobile .dock-add { margin: 0 2px; }
 
 /* --- окна выезжают снизу --- */
 body.mobile .modal-wrap { place-items: end center; }
-body.mobile .modal, body.mobile .modal.wide { width: 100%; max-height: calc(100% - var(--sat) - 30px); border-radius: 28px 28px 0 0; padding: 14px 18px calc(18px + var(--sab)); transform: translateY(60px); }
+body.mobile .modal, body.mobile .modal.wide { width: 100%; max-height: calc(100% - var(--sat) - 30px); border-radius: 28px 28px 0 0; padding: 18px 18px 0; transform: translateY(60px); }
+body.mobile .modal-body { margin: 0 -18px; padding: 2px 18px calc(20px + var(--sab)); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+body.mobile .modal-body::-webkit-scrollbar { display: none; }
+body.mobile #screen-calendar { scrollbar-width: none; }
+body.mobile #screen-calendar::-webkit-scrollbar { display: none; }
 body.mobile .modal::before { content: ""; position: absolute; top: 7px; left: 50%; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; background: rgba(255, 255, 255, .3); }
 body.mobile .modal-wrap.in .modal { transform: none; }
 body.mobile .f-row { grid-template-columns: minmax(0, 1fr); gap: 0; }
@@ -1053,3 +1077,72 @@ body.mobile #toasts { bottom: calc(var(--sab) + 84px); width: calc(100% - 28px);
 body.mobile .toast { max-width: 100%; }
 body.mobile .pct-hint { display: none; }
 body.mobile .set-card:has([data-act=folder]) { display: none; } /* на iPhone папки с данными нет */
+body.mobile .cal-grid.from-right .cal-cells { animation-name: mBoardR; }
+body.mobile .cal-grid.from-left .cal-cells { animation-name: mBoardL; }
+/* пока открыта клавиатура, нижняя панель не нужна */
+body.kb-open .dock { display: none; }
+
+/* =========================================================
+   iPhone ГОРИЗОНТАЛЬНО: панель слева столбиком, всё в две колонки
+   ========================================================= */
+@media (orientation: landscape) and (max-height: 520px) {
+  body.mobile { --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px); --rail: calc(max(var(--sal), 8px) + 70px); }
+  body.mobile #screens { top: calc(var(--sat) + 4px); }
+  body.mobile .screen { inset: 0 max(var(--sar), 14px) max(var(--sab), 8px) var(--rail); }
+  body.mobile #screen-calendar { left: var(--rail); right: max(var(--sar), 14px); padding: 0; overflow: hidden; }
+
+  /* док — вертикальная полоса у левого края */
+  body.mobile .dock { left: max(var(--sal), 8px); right: auto; top: 50%; bottom: auto; transform: translateY(-50%); flex-direction: column; padding: 6px; gap: 2px; border-radius: 24px; }
+  body.mobile .dock-bubble { top: 0; left: 6px; width: 48px !important; }
+  body.mobile .dock-btn { width: 48px; height: 46px; border-radius: 16px; }
+  body.mobile .dock-add { margin: 2px 0; }
+
+  /* день: заголовок в одну строку, дела в две колонки */
+  body.mobile .day-head { flex-wrap: nowrap; gap: 12px; }
+  body.mobile .date-block { width: auto; gap: 10px; }
+  body.mobile .big-date { font-size: 38px; }
+  body.mobile .weekday { font-size: 18px; }
+  body.mobile .head-right { width: auto; flex: 1; justify-content: flex-end; gap: 10px; }
+  body.mobile .day-nav .icon-btn { width: 40px; height: 36px; }
+  body.mobile .cat-filter { margin: 8px -14px 8px 0; padding: 0 14px 2px 0; }
+  body.mobile .board[data-mode=list] { margin: 0 -14px 0 0; padding: 2px 14px 10px 0; }
+  body.mobile .mlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: start; }
+  body.mobile .mlist .tcard { padding: 12px 14px; border-radius: 20px; }
+  body.mobile .mlist .tcard-title { font-size: 17px; -webkit-line-clamp: 2; }
+  body.mobile .mlist .add-card { height: 50px; }
+
+  /* календарь: месяц слева, выбранный день справа, без прокрутки экрана */
+  body.mobile .cal-head { flex-wrap: nowrap; margin-bottom: 8px; gap: 10px; }
+  body.mobile .cal-month { font-size: 28px; }
+  body.mobile .cal-year { font-size: 16px; }
+  body.mobile .cal-head .cat-filter.inline { order: 0; flex: 1; width: auto; margin: 0; padding: 0; }
+  body.mobile .cal-head .day-nav .nav-today { height: 36px; }
+  body.mobile #screen-calendar .cal-body { flex: 1; min-height: 0; grid-template-columns: minmax(0, 1fr) minmax(250px, 36%); grid-template-rows: minmax(0, 1fr); gap: 10px; }
+  body.mobile .cal-grid { height: auto; min-height: 0; padding: 6px; border-radius: 18px; }
+  body.mobile .cal-wd span { font-size: 9.5px; }
+  body.mobile .cell { padding: 2px; border-radius: 9px; }
+  body.mobile .cell-head { height: 20px; }
+  body.mobile .cell-num { width: 20px; height: 20px; font-size: 12px; }
+  body.mobile .cchip { height: 3px; }
+  body.mobile .cal-side { padding: 10px 12px; gap: 8px; border-radius: 18px; min-height: 0; overflow: hidden; }
+  body.mobile .side-num { font-size: 30px; }
+  body.mobile .side-wd { font-size: 15px; }
+  body.mobile .cal-side .side-actions .btn { height: 38px; font-size: 13.5px; padding: 0 8px; }
+  body.mobile .cal-side .side-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  body.mobile .side-item { min-height: 46px; }
+
+  /* дела, проекты, настройки — шире и в две колонки */
+  body.mobile .set-grid, body.mobile .pgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.mobile .settings, body.mobile .projects-scroll { margin: 0 -14px 0 0; padding: 2px 14px 14px 0; }
+  body.mobile .set-hero { padding: 12px 16px; }
+  body.mobile .proj-h1 { font-size: 28px; }
+
+  /* окно — по центру снизу, не во всю ширину */
+  body.mobile .modal, body.mobile .modal.wide { width: min(600px, calc(100% - var(--rail) - var(--sar))); max-height: calc(100% - var(--sat) - 8px); padding-top: 14px; }
+  body.mobile .modal-body { padding-bottom: max(14px, var(--sab)); }
+  body.mobile .modal-head h2 { font-size: 19px; }
+  body.mobile #toasts { bottom: max(var(--sab), 10px); left: calc(50% + var(--rail) / 2); width: min(520px, calc(100% - var(--rail) - 28px)); }
+  body.mobile .list-head { flex-wrap: nowrap; }
+  body.mobile .list-head h2 { flex: none; }
+  body.mobile .search { order: 0; flex: 1 1 auto; }
+}

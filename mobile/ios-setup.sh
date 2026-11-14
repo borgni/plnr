@@ -21,8 +21,10 @@ pb "Delete :UIStatusBarStyle";  pb "Add :UIStatusBarStyle string UIStatusBarStyl
 pb "Delete :UIViewControllerBasedStatusBarAppearance"; pb "Add :UIViewControllerBasedStatusBarAppearance bool false"
 pb "Delete :UIUserInterfaceStyle"; pb "Add :UIUserInterfaceStyle string Dark"
 pb "Delete :ITSAppUsesNonExemptEncryption"; pb "Add :ITSAppUsesNonExemptEncryption bool false"
-# только вертикально на iPhone
+# вертикально и горизонтально (вверх ногами — нет, как в системных приложениях)
 pb "Delete :UISupportedInterfaceOrientations"
 pb "Add :UISupportedInterfaceOrientations array"
 pb "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait"
+pb "Add :UISupportedInterfaceOrientations:1 string UIInterfaceOrientationLandscapeLeft"
+pb "Add :UISupportedInterfaceOrientations:2 string UIInterfaceOrientationLandscapeRight"
 echo "iOS project ready"

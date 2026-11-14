@@ -11,3 +11,7 @@ test/final/
 test/dbg/
 test/names/
 *.png.tmp
+test/land/
+test/m18/
+test/syncmob/
+test/syncui/

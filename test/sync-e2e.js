@@ -143,6 +143,15 @@ app.whenReady().then(async () => {
   await J('laptop', `P.store.setSetting('theme','amethyst'); 0`);
   await syncNow('laptop'); await syncNow('phone');
   check('тема оформления синхронизируется', (await J('phone', `P.store.settings.theme`)) === 'amethyst');
+  // 8б. ровно та поломка: на ноутбуке своя тема дел, телефон меняет цвет — темы не слетают
+  await J('laptop', `P.store.saveCats([...P.store.cats(), {id:'dl', name:'Дедлайны', icon:'poop', color:'#c08457'}]); P.store.add({id:'L30', title:'Эссе', category:'dl', date:'${today}'}); 0`);
+  await J('phone', `P.store.setSetting('theme','rose'); 0`);
+  await syncNow('laptop'); await syncNow('phone'); await syncNow('laptop');
+  check('цвет с телефона дошёл до ноутбука', (await J('laptop', `P.store.settings.theme`)) === 'rose');
+  check('темы дел ноутбука не слетели', (await J('laptop', `P.store.cats().some(c=>c.id==='dl')`)) === true && (await J('laptop', `P.store.get('L30').category`)) === 'dl');
+  check('телефон получил тему «Дедлайны» и дело в ней', (await J('phone', `P.store.cats().some(c=>c.id==='dl') && P.store.get('L30').category`)) === 'dl');
+  await J('laptop', `P.store.remove('L30'); 0`); await syncNow('laptop'); await syncNow('phone');
+  await J('laptop', `P.store.setSetting('theme','amethyst'); 0`); await syncNow('laptop'); await syncNow('phone');
   // 9. данные на диске
   await J('laptop', `P.store.flush()`); await J('phone', `P.store.flush()`); await sleep(300);
   const disk = ['laptop', 'phone'].map((n) => JSON.parse(fs.readFileSync(path.join(dirs[n], 'plannner-data.json'), 'utf8')).tasks.length);

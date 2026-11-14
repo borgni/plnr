@@ -28,7 +28,8 @@ window.P = window.P || {};
     tasks: [],
     projects: [],
     deleted: {},      // id → когда удалено (нужно, чтобы удаление дошло до другого устройства)
-    settingsAt: 0,    // когда последний раз менялись настройки
+    settingsAt: 0,    // устаревшее общее время правки настроек (для старых версий)
+    settingsTs: {},   // время правки каждой настройки отдельно: cats, theme, projectsEnabled
     settings: { theme: 'ocean', cats: structuredClone(P.DEFAULT_CATS), projectsEnabled: false },
   };
 
@@ -71,7 +72,7 @@ window.P = window.P || {};
     sig = new Map();
     for (const t of data.tasks) sig.set('t:' + t.id, sigOf(t));
     for (const p of data.projects) sig.set('p:' + p.id, sigOf(p));
-    sig.set('settings', JSON.stringify(data.settings));
+    for (const k of Object.keys(data.settings)) sig.set('s:' + k, JSON.stringify(data.settings[k]));
   }
   function stampChanges() {
     const now = Date.now();
@@ -85,10 +86,14 @@ window.P = window.P || {};
     };
     mark('t:', data.tasks);
     mark('p:', data.projects);
-    for (const k of sig.keys()) if (k !== 'settings' && !next.has(k)) data.deleted[k.slice(2)] = now;
-    const ss = JSON.stringify(data.settings);
-    if (sig.get('settings') !== ss) data.settingsAt = now;
-    next.set('settings', ss);
+    for (const k of sig.keys()) if (!k.startsWith('s:') && !next.has(k)) data.deleted[k.slice(2)] = now;
+    // настройки — каждая отдельно, чтобы смена цвета на телефоне не затирала темы дел с ноутбука
+    if (!data.settingsTs || typeof data.settingsTs !== 'object') data.settingsTs = {};
+    for (const k of Object.keys(data.settings)) {
+      const v = JSON.stringify(data.settings[k]);
+      if (sig.get('s:' + k) !== v) { data.settingsTs[k] = Math.max(now, (data.settingsTs[k] || 0) + 1); data.settingsAt = now; }
+      next.set('s:' + k, v);
+    }
     sig = next;
   }
 
@@ -99,11 +104,18 @@ window.P = window.P || {};
     persist();
   }
 
+  const cleanTs = (o) => {
+    const r = {};
+    if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) if (+v > 0) r[k] = +v;
+    return r;
+  };
+
   function normalizeTask(t) {
     return {
       id: t.id || P.uid(),
       title: String(t.title || '').trim() || 'Без названия',
-      category: P.CATS[t.category] ? t.category : (P.CAT_IDS[0] || 'study'),
+      // неизвестную тему не подменяем: она могла просто ещё не доехать с другого устройства
+      category: t.category ? String(t.category) : (P.CAT_IDS[0] || 'study'),
       date: /^\d{4}-\d{2}-\d{2}$/.test(t.date) ? t.date : P.todayKey(),
       start: t.start || '',
       end: t.end || '',
@@ -145,6 +157,7 @@ window.P = window.P || {};
         data.projects = (Array.isArray(raw.projects) ? raw.projects : []).map(normalizeProject);
         if (!data.deleted || typeof data.deleted !== 'object') data.deleted = {};
         data.settingsAt = +data.settingsAt || 0;
+        data.settingsTs = cleanTs(raw.settingsTs);
         index = null;
       } else {
         P.rebuildCats(data.settings.cats);
@@ -163,6 +176,8 @@ window.P = window.P || {};
       data.tasks = (merged.tasks || []).map(normalizeTask);
       data.projects = (merged.projects || []).map(normalizeProject);
       data.deleted = merged.deleted || {};
+      data.settingsAt = +merged.settingsAt || 0;
+      data.settingsTs = cleanTs(merged.settingsTs);
       snapshotSig();
       emit('sync');
     },

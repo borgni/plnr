@@ -46,5 +46,20 @@ check('очистка старых отметок удаления', !('old' in 
 // 9. дело без меток времени (из старой версии) не теряется
 L = { tasks: [{ id: 'x', title: 'старое' }], projects: [], deleted: {}, settings: {}, settingsAt: 0 };
 check('дела из старых версий без меток', ids(M(L, { tasks: [], projects: [], deleted: {}, settings: {}, settingsAt: 0 })) === 'x');
+// 10. телефон с темами по умолчанию сменил цвет — темы дел с ноутбука не затираются
+const LAP = [{ id: 'study', name: 'Учёба' }, { id: 'dl', name: 'Дедлайны', icon: 'poop' }];
+const DEF = [{ id: 'study', name: 'Учёба' }, { id: 'work', name: 'Работа' }];
+R = { tasks: [], projects: [], deleted: {}, settings: { theme: 'mint', cats: LAP }, settingsTs: { cats: 100, theme: 100 }, settingsAt: 100 };
+L = { tasks: [], projects: [], deleted: {}, settings: { theme: 'rose', cats: DEF }, settingsTs: { theme: 200 }, settingsAt: 200 };
+m = M(L, R);
+check('цвет с телефона, темы дел с ноутбука', m.settings.theme === 'rose' && m.settings.cats.length === 2 && m.settings.cats[1].id === 'dl');
+check('метки настроек сохраняются по отдельности', m.settingsTs.cats === 100 && m.settingsTs.theme === 200);
+// 11. новый телефон (метки 0) — всё из облака, даже если старая версия облака без отдельных меток
+L = { tasks: [], projects: [], deleted: {}, settings: { theme: 'ocean', cats: DEF }, settingsTs: {}, settingsAt: 0 };
+m = M(L, { ...R, settingsTs: undefined });
+check('новое устройство берёт настройки из облака', m.settings.theme === 'mint' && m.settings.cats[1].id === 'dl');
+// 12. равные метки — побеждает облако (устройства сходятся)
+m = M({ ...L, settings: { theme: 'rose' }, settingsTs: { theme: 100 } }, R);
+check('равные метки → облако', m.settings.theme === 'mint');
 console.log(`\n${ok} из ${ok + fail} проверок прошли`);
 process.exit(fail ? 1 : 0);

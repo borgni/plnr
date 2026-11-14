@@ -103,7 +103,7 @@ window.P = window.P || {};
               <span class="side-item-meta"><i></i>${P.esc(P.catOf(t.category).name)} · ${P.timeRange(t)}${P.projTag(t, 'inline')}</span>
             </div>
             <button class="icon-btn sm danger" data-act="delete" title="Удалить">${P.icon('trash-2')}</button>
-          </div>`).join('') : `<div class="side-empty">${P.icon('sparkles')}<span>Нет дел. Дважды нажмите на день в календаре, чтобы быстро добавить.</span></div>`}
+          </div>`).join('') : `<div class="side-empty">${P.icon('sparkles')}<span>${P.isMobile() ? 'Нет дел на этот день.' : 'Нет дел. Дважды нажмите на день в календаре, чтобы быстро добавить.'}</span></div>`}
       </div>
 
       <div class="side-actions">
@@ -124,6 +124,7 @@ window.P = window.P || {};
 
   function render() {
     const dir = C.dir;
+    const top = root.scrollTop;
     root.innerHTML = `${headHTML()}<div class="cal-body">${gridHTML()}${sideHTML()}</div>`;
     // если реальная высота ячеек отличается от оценки — перерисовать сетку точно
     const cell = root.querySelector('.cell');
@@ -140,6 +141,7 @@ window.P = window.P || {};
       }
     }
     C.dir = 0;
+    if (top) root.scrollTop = top;
   }
 
   function renderSide() {
@@ -203,7 +205,8 @@ window.P = window.P || {};
     if (sideItem) return P.openTaskModal({ task: P.store.get(sideItem.dataset.id) });
 
     const chipEl = e.target.closest('.cchip');
-    if (chipEl) { select(chipEl.closest('.cell').dataset.k); return P.openTaskModal({ task: P.store.get(chipEl.dataset.id) }); }
+    // на телефоне нажатие на день только выбирает его — дела открываются из списка ниже
+    if (chipEl && !P.isMobile()) { select(chipEl.closest('.cell').dataset.k); return P.openTaskModal({ task: P.store.get(chipEl.dataset.id) }); }
     const more = e.target.closest('.cell-more');
     if (more) return select(more.closest('.cell').dataset.k);
     const cell = e.target.closest('.cell');
@@ -298,6 +301,7 @@ window.P = window.P || {};
       root = el;
       root.addEventListener('click', onClick);
       root.addEventListener('dblclick', (e) => {
+        if (P.isMobile()) return;
         const cell = e.target.closest('.cell');
         if (cell && !e.target.closest('.cchip, [data-act]')) P.openTaskModal({ date: cell.dataset.k });
       });

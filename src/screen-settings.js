@@ -30,11 +30,13 @@ window.P = window.P || {};
       </section>`;
     }
     const labels = { idle: 'Подключено', syncing: 'Синхронизация…', ok: 'Синхронизировано', offline: 'Нет интернета — изменения отправятся позже', error: 'Ошибка синхронизации' };
+    // фоновая синхронизация раз в минуту не должна мигать надписью
+    const status = st.status === 'syncing' && st.lastSync ? 'ok' : st.status;
     const time = st.lastSync ? new Date(st.lastSync).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
     return `<section class="set-card glass sync-card">
       <h3>${P.icon('rotate-ccw')}Синхронизация <span class="h3-note">ноутбук ↔ телефон</span></h3>
       <div class="set-row"><div><b>${P.esc(st.session.user.email)}</b>
-        <span class="sync-status ${st.status}"><i></i>${labels[st.status] || ''}${st.status === 'ok' && time ? ' в ' + time : ''}${st.status === 'error' && st.lastError ? ': ' + P.esc(st.lastError) : ''}</span></div>
+        <span class="sync-status ${status}"><i></i>${labels[status] || ''}${status === 'ok' && time ? ' в ' + time : ''}${status === 'error' && st.lastError ? ': ' + P.esc(st.lastError) : ''}</span></div>
         <div class="sync-btns">
           <button class="btn ghost" data-sync="now">${P.icon('rotate-ccw')}Сейчас</button>
           <button class="btn ghost danger" data-sync="out">Выйти</button>
@@ -268,7 +270,18 @@ window.P = window.P || {};
       root = el;
       root.addEventListener('click', onClick);
       root.addEventListener('submit', (e) => { if (e.target.closest('.sync-form')) { e.preventDefault(); root.querySelector('[data-sync=in]').click(); } });
-      if (P.sync) P.sync.onChange(() => { if (root.classList.contains('active') && !root.querySelector('.sync-form input:focus')) render(); });
+      // статус синхронизации меняется часто — обновляем только её карточку и только если текст другой
+      let lastSync = '';
+      if (P.sync) P.sync.onChange(() => {
+        const card = root.querySelector('.sync-card');
+        if (!card || root.querySelector('.sync-form input:focus')) return;
+        const html = syncHTML();
+        if (html === lastSync) return;
+        lastSync = html;
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+        card.replaceWith(tpl.content);
+      });
       // переименование темы — сохраняем по Enter или при уходе из поля
       root.addEventListener('change', (e) => {
         const inp = e.target.closest('.cat-name');

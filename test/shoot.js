@@ -105,6 +105,16 @@ app.whenReady().then(async () => {
       console.log('WHEEL-POS', await win.webContents.executeJavaScript(`(()=>{const c=document.querySelectorAll('.tp-col'); return [...c].map(x=>x.scrollTop).join(',')})()`));
       await run(`document.querySelector('.modal [name=end]').focus()`); await sleep(500); await run(`document.querySelector('.tp [data-add="90"]').click()`); await shot('41-wheel-end', 800);
       console.log('WHEEL2', await win.webContents.executeJavaScript(`document.querySelector('.modal [name=start]').value+' '+document.querySelector('.modal [name=end]').value+' '+!!document.querySelector('.tp')`)); }
+    if (s === 'force') { await run(`document.body.classList.add('mobile'); P.refreshDock(); P.show('day')`); await sleep(400); }
+    if (s === 'mcal') {
+      await run(`P.openCalendarAt(P.addDays(P.todayKey(),1))`); await shot('m1-cal', 900);
+      await run(`document.querySelector('.cell[data-k="'+P.addDays(P.todayKey(),1)+'"] .cchip').click()`); await sleep(300);
+      console.log('MCAL modal-open-after-chip-tap', await win.webContents.executeJavaScript(`P.isModalOpen()`));
+      await run(`document.getElementById('screen-calendar').scrollTop=9999`); await shot('m2-cal-scrolled', 500);
+      console.log('MCAL scroll', await win.webContents.executeJavaScript(`(()=>{const s=document.getElementById('screen-calendar'); const b=document.querySelector('.side-actions').getBoundingClientRect(); return JSON.stringify({sh:s.scrollHeight,ch:s.clientHeight,st:s.scrollTop,items:document.querySelectorAll('.side-item').length, btnTop:Math.round(b.top)})})()`));
+    }
+    if (s === 'madd') { await run(`P.show('day'); P.openTaskModal({date:P.todayKey()})`); await shot('m3-add', 900); await run(`P.show('day'); document.querySelector('.modal-body').scrollTop=9999`); await shot('m4-add-bottom', 500); await run(`document.querySelector('.modal [data-close]').click()`); await sleep(400); }
+    if (s.startsWith('m:')) { const id = s.slice(2); await run(`P.show('${id.split('@')[0]}')`); await shot('m-' + id.replace('@','-'), 900); }
     if (s === 'qa2') {
       const J = (js) => win.webContents.executeJavaScript(js).catch((e) => { console.log('J-ERR', e.message, js.slice(0, 140)); return null; });
       const key = async (keyCode, modifiers = []) => { win.webContents.sendInputEvent({ type: 'keyDown', keyCode, modifiers }); win.webContents.sendInputEvent({ type: 'char', keyCode, modifiers }); win.webContents.sendInputEvent({ type: 'keyUp', keyCode, modifiers }); await sleep(350); };
