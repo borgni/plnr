@@ -16,8 +16,14 @@ P.CATS = {};
 P.CAT_IDS = [];      // активные темы — их можно выбрать для дела
 P.rebuildCats = (list) => {
   P.CATS = {};
-  for (const c of list) P.CATS[c.id] = { ...c };
-  P.CAT_IDS = list.filter((c) => !c.deleted).map((c) => c.id);
+  for (const c of list) {
+    // темы тоже могут прийти из облака: id, цвет и стикер — только в ожидаемом виде
+    if (!c || typeof c.id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(c.id)) continue;
+    P.CATS[c.id] = { ...c, name: String(c.name || 'Тема'),
+      color: /^#[0-9a-fA-F]{3,8}$/.test(c.color || '') ? c.color : '#94a3b8',
+      icon: P.ICONS && P.ICONS[c.icon] ? c.icon : 'tag' };
+  }
+  P.CAT_IDS = Object.values(P.CATS).filter((c) => !c.deleted).map((c) => c.id);
 };
 // темы для фильтров: активные + удалённые, у которых ещё есть дела
 P.filterCats = () => {

@@ -24,7 +24,7 @@ jobs:
 
       - name: Установить Capacitor
         working-directory: mobile
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Подготовить проект Xcode
         run: |
@@ -38,7 +38,7 @@ jobs:
           xcodebuild $TARGET -scheme App -configuration Release -sdk iphoneos \
             -destination 'generic/platform=iOS' -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            MARKETING_VERSION=1.9.1 CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            MARKETING_VERSION=1.9.2 CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             build | tail -40
           test -d build/Build/Products/Release-iphoneos/App.app
 

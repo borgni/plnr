@@ -1,7 +1,7 @@
 {
   "name": "plnr-ios",
   "private": true,
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "PLNR для iPhone (обёртка Capacitor вокруг общего интерфейса из ../src)",
   "dependencies": {
     "@capacitor/core": "^8.6.2",

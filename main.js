@@ -103,9 +103,16 @@ function createWindow() {
   win.once('ready-to-show', () => win.show());
   if (process.env.PLNR_AUTOCLOSE) setTimeout(() => win.close(), +process.env.PLNR_AUTOCLOSE); // для проверки закрытия
 
-  // Внешние ссылки — в браузер, не внутри приложения
-  win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  // Внешние ссылки — в браузер, не внутри приложения; и только обычные веб-адреса и почта
+  // (никаких file:, ms-…: и других схем, через которые можно запустить что-то на компьютере)
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    try { if (['https:', 'http:', 'mailto:'].includes(new URL(url).protocol)) shell.openExternal(url); } catch {}
+    return { action: 'deny' };
+  });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
+  // окну не нужны камера, микрофон, геопозиция, уведомления и т. п.
+  win.webContents.session.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
+  win.webContents.session.setPermissionCheckHandler(() => false);
 
   const saveState = () => {
     if (!win || win.isDestroyed()) return;
@@ -129,7 +136,10 @@ function createWindow() {
 }
 
 // --- IPC: данные ---
-ipcMain.handle('store:load', () => {
+// отвечаем только своему окну с локальной страницы приложения
+const trusted = (e) => { try { return !!win && e.sender === win.webContents && String(e.senderFrame?.url || '').startsWith('file://'); } catch { return false; } };
+ipcMain.handle('store:load', (e) => {
+  if (!trusted(e)) return null;
   const file = dataFile();
   if (!fs.existsSync(file)) return readJSON(file + '.bak');
   const d = readJSON(file);
@@ -145,12 +155,13 @@ ipcMain.handle('store:load', () => {
   return null;
 });
 
-ipcMain.handle('store:save', async (_e, data) => {
+ipcMain.handle('store:save', async (e, data) => {
+  if (!trusted(e)) throw new Error('denied');
   await writeDataSafe(dataFile(), data);
   return true;
 });
 
-ipcMain.handle('data:folder', () => shell.openPath(app.getPath('userData')));
+ipcMain.handle('data:folder', (e) => (trusted(e) ? shell.openPath(app.getPath('userData')) : ''));
 
 // --- Запуск ---
 const gotLock = app.requestSingleInstanceLock();

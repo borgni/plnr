@@ -110,31 +110,45 @@ window.P = window.P || {};
     return r;
   };
 
+  // данные приходят и из облака — пропускаем в интерфейс только ожидаемые форматы
+  const safeId = (v, fallback) => (typeof v === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(v) ? v : fallback());
+  const safeTime = (v) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : '');
+  const safeColor = (v, d) => (typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v) ? v : d);
+  P.safeColor = safeColor;
+  P.safeId = (v) => safeId(v, () => '');
+
+  // темы: только корректные id, цвет и стикер (список мог прийти из облака)
+  function cleanCats(list) {
+    const out = (Array.isArray(list) ? list : []).filter((c) => c && typeof c.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(c.id))
+      .map((c) => ({ ...c, name: String(c.name || 'Тема').slice(0, 60), color: safeColor(c.color, '#94a3b8'), icon: P.ICONS && P.ICONS[c.icon] ? c.icon : 'tag', deleted: !!c.deleted }));
+    return out.length ? out : structuredClone(P.DEFAULT_CATS);
+  }
+
   function normalizeTask(t) {
     return {
-      id: t.id || P.uid(),
+      id: safeId(t.id, P.uid),
       title: String(t.title || '').trim() || 'Без названия',
       // неизвестную тему не подменяем: она могла просто ещё не доехать с другого устройства
-      category: t.category ? String(t.category) : (P.CAT_IDS[0] || 'study'),
+      category: safeId(t.category, () => P.CAT_IDS[0] || 'study'),
       date: /^\d{4}-\d{2}-\d{2}$/.test(t.date) ? t.date : P.todayKey(),
-      start: t.start || '',
-      end: t.end || '',
-      note: t.note || '',
+      start: safeTime(t.start),
+      end: safeTime(t.start) ? safeTime(t.end) : '',
+      note: String(t.note || ''),
       done: !!t.done,
-      seriesId: t.seriesId || null,
+      seriesId: t.seriesId ? safeId(t.seriesId, () => null) : null,
       createdAt: t.createdAt || Date.now(),
       updatedAt: t.updatedAt || t.createdAt || 0,
       // связь с длительным проектом: сколько % проекта даёт выполнение этого дела
-      projectId: t.projectId || null,
+      projectId: t.projectId ? safeId(t.projectId, () => null) : null,
       projectPct: t.projectId ? Math.max(0, Math.min(100, Math.round(+t.projectPct || 0))) : 0,
     };
   }
 
   function normalizeProject(p) {
     return {
-      id: p.id || 'p' + P.uid(),
+      id: safeId(p.id, () => 'p' + P.uid()),
       name: String(p.name || '').trim() || 'Проект',
-      color: p.color || '#5cc8ff',
+      color: safeColor(p.color, '#5cc8ff'),
       deadline: /^\d{4}-\d{2}-\d{2}$/.test(p.deadline || '') ? p.deadline : '',
       base: Math.max(0, Math.min(100, Math.round(+p.base || 0))), // прогресс, уже сделанный до начала учёта
       createdAt: p.createdAt || Date.now(),
@@ -151,7 +165,7 @@ window.P = window.P || {};
           ...raw,
           settings: { ...DEFAULTS.settings, ...(raw.settings || {}) },
         };
-        if (!Array.isArray(data.settings.cats) || !data.settings.cats.length) data.settings.cats = structuredClone(P.DEFAULT_CATS);
+        data.settings.cats = cleanCats(data.settings.cats);
         P.rebuildCats(data.settings.cats);
         data.tasks = raw.tasks.map(normalizeTask);
         data.projects = (Array.isArray(raw.projects) ? raw.projects : []).map(normalizeProject);
@@ -171,7 +185,7 @@ window.P = window.P || {};
         ...merged,
         settings: { ...DEFAULTS.settings, ...(merged.settings || {}) },
       };
-      if (!Array.isArray(data.settings.cats) || !data.settings.cats.length) data.settings.cats = structuredClone(P.DEFAULT_CATS);
+      data.settings.cats = cleanCats(data.settings.cats);
       P.rebuildCats(data.settings.cats);
       data.tasks = (merged.tasks || []).map(normalizeTask);
       data.projects = (merged.projects || []).map(normalizeProject);
@@ -235,7 +249,7 @@ window.P = window.P || {};
         ...raw,
         settings: { ...DEFAULTS.settings, ...(raw.settings || {}) },
       };
-      if (!Array.isArray(data.settings.cats) || !data.settings.cats.length) data.settings.cats = structuredClone(P.DEFAULT_CATS);
+      data.settings.cats = cleanCats(data.settings.cats);
       P.rebuildCats(data.settings.cats);
       data.tasks = (raw.tasks || []).map(normalizeTask);
       data.projects = (Array.isArray(raw.projects) ? raw.projects : []).map(normalizeProject);
@@ -280,7 +294,7 @@ window.P = window.P || {};
 
     /* --- темы дел (только из Настроек) --- */
     cats() { return data.settings.cats; },
-    saveCats(list) { data.settings.cats = list; P.rebuildCats(list); emit('cats'); },
+    saveCats(list) { data.settings.cats = cleanCats(list); P.rebuildCats(data.settings.cats); emit('cats'); },
     countByCat(id) { return data.tasks.reduce((n, t) => n + (t.category === id ? 1 : 0), 0); },
   };
 })();

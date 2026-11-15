@@ -107,6 +107,16 @@ app.whenReady().then(async () => {
       console.log('WHEEL2', await win.webContents.executeJavaScript(`document.querySelector('.modal [name=start]').value+' '+document.querySelector('.modal [name=end]').value+' '+!!document.querySelector('.tp')`)); }
     if (s === 'force') { await run(`document.body.classList.add('mobile'); P.refreshDock(); P.show('day')`); await sleep(400); }
     if (s === 'mproj') { await run(`P.store.setSetting('projectsEnabled', true); P.refreshDock(); P.store.addProject({name:'IOT', color:'#34d399', deadline:P.addDays(P.todayKey(),11), base:40}); P.store.addProject({name:'Сайт СтройПласт', color:'#a78bfa'}); P.show('projects')`); await shot('m6-proj', 900); }
+    if (s === 'xss') {
+      const r = await win.webContents.executeJavaScript(`(async()=>{
+        const d=structuredClone(P.store.data);
+        d.tasks.push({id:'x"><b id=pwn1>',title:'<b id=pwn2>t</b>',category:'study" data-x="1',date:P.todayKey(),start:'<b id=pwn3>',end:'x',note:'<b id=pwn4>'});
+        d.settings.cats=[...d.settings.cats,{id:'evil',name:'<b id=pwn5>',color:'red;background:url(x)" onclick="alert(1)',icon:'<b id=pwn6>'}];
+        P.store.applySynced(d); P.rebuildCats(P.store.settings.cats); P.openDay(P.todayKey()); await new Promise(r=>setTimeout(r,500));
+        P.show('tasks'); await new Promise(r=>setTimeout(r,300)); P.show('calendar'); await new Promise(r=>setTimeout(r,300)); P.show('settings'); await new Promise(r=>setTimeout(r,300));
+        return JSON.stringify({pwn:[...document.querySelectorAll('[id^=pwn]')].length, onclick:document.querySelectorAll('[onclick]').length});
+      })()`); console.log('XSS', r);
+    }
     if (s === 'onetap') {
       const r = await win.webContents.executeJavaScript(`(async()=>{
         const sl=(ms)=>new Promise(r=>setTimeout(r,ms));
